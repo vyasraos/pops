@@ -7,6 +7,7 @@ import type { CommandModule } from 'yargs';
 import { JiraApiClient } from '../services/jira-api-client';
 import { logger } from '../utils/logger';
 import { SimpleMapper } from '../utils/simple-mapper';
+import type { JiraIssue } from '../types';
 
 interface IssueUpdateArgs {
   file?: string;
@@ -77,15 +78,15 @@ class IssueUpdater {
       const content = await fs.readFile(targetFile, 'utf8');
       const { frontmatter, summary, description } = this.parseMarkdown(content);
 
-      if (!frontmatter.properties?.key) {
+      if (!(frontmatter.properties as Record<string, unknown>)?.key) {
         throw new Error('Issue key not found in frontmatter');
       }
 
-      const key = frontmatter.properties.key;
+      const key = (frontmatter.properties as Record<string, unknown>)?.key as string;
 
       // Build Jira fields using mapping
       console.log(chalk.blue('\n🚀 Updating issue in Jira...'));
-      let jiraFields: JiraFields = {
+      let jiraFields: Record<string, unknown> = {
         summary: summary.trim(),
         description: description.trim(),
       };
@@ -95,8 +96,8 @@ class IssueUpdater {
         console.log(chalk.blue('📋 Applying field mappings...'));
 
         const mappedFields = this.mapper.mapPropertiesToJira(
-          frontmatter.properties,
-          frontmatter.mapping
+          frontmatter.properties as Record<string, unknown>,
+          frontmatter.mapping as Record<string, string>
         );
 
         const additionalFields = this.mapper.convertToJiraFields(mappedFields);
@@ -177,14 +178,14 @@ class IssueUpdater {
               const content = await fs.readFile(fullPath, 'utf8');
               const { frontmatter } = this.parseMarkdown(content);
 
-              if (frontmatter.properties?.key) {
+              if ((frontmatter.properties as Record<string, unknown>)?.key) {
                 const component = this.extractComponentFromPath(fullPath);
                 issues.push({
-                  key: frontmatter.properties.key,
+                  key: (frontmatter.properties as Record<string, unknown>).key as string,
                   summary: this.extractSummaryFromContent(content),
                   component: component,
                   filePath: fullPath,
-                  type: frontmatter.properties.type || 'Unknown',
+                  type: ((frontmatter.properties as Record<string, unknown>).type as string) || 'Unknown',
                 });
               }
             } catch (error) {
@@ -216,8 +217,8 @@ class IssueUpdater {
 
   private async findFileByKey(issueKey: string): Promise<string | null> {
     const issues = await this.getAllWorkspaceIssues();
-    const issue = issues.find((i) => i.key === issueKey);
-    return issue ? issue.filePath : null;
+      const issue = issues.find((i) => (i as any).key === issueKey);
+      return issue ? (issue as any).filePath : null;
   }
 }
 

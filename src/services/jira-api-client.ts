@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios';
 import * as dotenv from 'dotenv';
-import type { JiraComponent, JiraProject } from '../types';
+import type { JiraComponent, JiraProject, JiraIssue } from '../types';
 import { logger } from '../utils/logger';
 import { POPSConfig } from '../utils/pops-config';
 
@@ -158,13 +158,13 @@ export class JiraApiClient {
         return response.data;
       }
 
-      return null;
+      return undefined;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
         if (axiosError.response?.status === 404) {
           logger.error(`Issue ${issueKey} not found`);
-          return null;
+          return undefined;
         }
         logger.error(
           `JIRA API Error: ${axiosError.response?.data || axiosError.message} (HTTP ${axiosError.response?.status})`
@@ -383,17 +383,17 @@ export class JiraApiClient {
 
   private mapComponent(component: Record<string, unknown>): JiraComponent {
     return {
-      id: component.id,
-      name: component.name,
-      description: component.description || '',
-      project: component.project,
-      projectId: component.projectId,
-      lead: component.lead?.displayName,
-      leadDisplayName: component.lead?.displayName,
-      leadUserName: component.lead?.name,
-      assigneeType: component.assigneeType,
-      realAssigneeType: component.realAssigneeType,
-      isAssigneeTypeValid: component.isAssigneeTypeValid,
+      id: component.id as string,
+      name: component.name as string,
+      description: (component.description as string) || '',
+      project: component.project as string,
+      projectId: component.projectId as string,
+      lead: (component.lead as Record<string, unknown>)?.displayName as string,
+      leadDisplayName: (component.lead as Record<string, unknown>)?.displayName as string,
+      leadUserName: (component.lead as Record<string, unknown>)?.name as string,
+      assigneeType: component.assigneeType as string,
+      realAssigneeType: component.realAssigneeType as string,
+      isAssigneeTypeValid: component.isAssigneeTypeValid as boolean,
     };
   }
 }

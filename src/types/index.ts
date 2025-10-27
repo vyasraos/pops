@@ -81,6 +81,16 @@ export interface MasterFile {
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 // New interfaces for data-driven approach
+export interface JiraIssue {
+  id: string;
+  key: string;
+  fields: Record<string, unknown>;
+  expand?: string;
+  renderedFields?: Record<string, unknown>;
+  changelog?: unknown;
+  self?: string;
+}
+
 export interface IssueRawData {
   id: string;
   key: string;

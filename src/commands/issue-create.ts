@@ -290,10 +290,10 @@ class IssueCreator {
   ): Promise<Array<{ key: string; summary: string }>> {
     try {
       const epics = await this.jiraClient.getAllEpicsByComponent(componentName);
-      return epics.map((epic) => ({
+      return epics?.map((epic) => ({
         key: epic.key,
-        summary: epic.fields.summary,
-      }));
+        summary: epic.fields.summary as string,
+      })) || [];
     } catch (error) {
       logger.warn(`Failed to fetch epics for component ${componentName}:`, error);
       return [];

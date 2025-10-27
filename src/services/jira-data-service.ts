@@ -1,6 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import type { FetchResult, IssueRawData } from '../types';
+import type { FetchResult, IssueRawData, JiraIssue } from '../types';
 import { logger } from '../utils/logger';
 import { POPSConfig } from '../utils/pops-config';
 import { JiraApiClient } from './jira-api-client';
@@ -39,7 +39,7 @@ export class JiraDataService {
       }
 
       // Determine component from issue
-      const component = issue.fields.components?.[0]?.name || 'unknown';
+      const component = (issue.fields.components as any)?.[0]?.name || 'unknown';
       const componentDir = path.join(this.dataPath, component);
       await fs.mkdir(componentDir, { recursive: true });
 
@@ -77,9 +77,9 @@ export class JiraDataService {
 
       // Get all epics for the component
       const epics = await this.jiraClient.getEpicsByComponent(componentName);
-      result.epicsFetched = epics.length;
+      result.epicsFetched = epics?.length || 0;
 
-      if (epics.length === 0) {
+      if (!epics || epics.length === 0) {
         logger.warn(`No epics found for component: ${componentName}`);
         return result;
       }
@@ -103,23 +103,25 @@ export class JiraDataService {
           // Save epic JSON
           const epicFileName = `epic-${epicKey}.json`;
           const epicFilePath = path.join(epicDataPath, epicFileName);
-          await this.saveIssueData(epic, epicFilePath);
+          await this.saveIssueData(epic as unknown as Record<string, unknown>, epicFilePath);
           result.totalIssuesFetched++;
 
           // Get and save children (stories and tasks)
           const children = await this.jiraClient.getIssueChildren(epicKey);
 
-          for (const child of children) {
-            const childKey = child.key;
-            const childType = child.fields.issuetype.name.toLowerCase();
-            const childFileName = `${childType}-${childKey}.json`;
-            const childFilePath = path.join(epicDataPath, childFileName);
+          if (children) {
+            for (const child of children) {
+              const childKey = child.key;
+              const childType = (child.fields.issuetype as any)?.name?.toLowerCase() || 'unknown';
+              const childFileName = `${childType}-${childKey}.json`;
+              const childFilePath = path.join(epicDataPath, childFileName);
 
-            await this.saveIssueData(child, childFilePath);
-            result.totalIssuesFetched++;
+              await this.saveIssueData(child as unknown as Record<string, unknown>, childFilePath);
+              result.totalIssuesFetched++;
+            }
+
+            logger.info(`Completed epic ${epicKey}: ${children.length} children processed`);
           }
-
-          logger.info(`Completed epic ${epicKey}: ${children.length} children processed`);
         } catch (error) {
           const errorMsg = `Failed to process epic ${epic.key}: ${error instanceof Error ? error.message : String(error)}`;
           logger.error(errorMsg);
@@ -145,7 +147,7 @@ export class JiraDataService {
     let epicName = epic.fields.summary || epic.key;
 
     // Clean up the name for folder use
-    epicName = epicName
+    epicName = (epicName as string)
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
       .replace(/\s+/g, '-') // Replace spaces with hyphens

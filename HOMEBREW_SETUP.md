@@ -69,9 +69,6 @@ In the main `pops` repository, add the following secrets:
 ```bash
 # GitHub Personal Access Token with repo permissions
 HOMEBREW_TAP_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# Optional: SonarCloud token for code quality
-SONAR_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### 4. Test the Formula

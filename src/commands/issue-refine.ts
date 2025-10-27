@@ -5,24 +5,10 @@ import * as yaml from 'js-yaml';
 import type { CommandModule } from 'yargs';
 import { JiraApiClient } from '../services/jira-api-client';
 import { logger } from '../utils/logger';
+import type { JiraIssue } from '../types';
 
 interface IssueRefineArgs {
   issueKey: string;
-}
-
-interface JiraIssue {
-  key: string;
-  fields: {
-    summary: string;
-    description?: string;
-    issuetype: { name: string };
-    components?: Array<{ name: string }>;
-    labels: string[];
-    status: { name: string };
-    customfield_12401?: { value: string }; // workstream
-    customfield_12400?: { value: string }; // initiative
-    customfield_10006?: number; // points
-  };
 }
 
 class IssueRefiner {
@@ -81,7 +67,7 @@ class IssueRefiner {
   }
 
   private async addReWorkspaceLabel(issueKey: string, jiraIssue: JiraIssue): Promise<void> {
-    const currentLabels = jiraIssue.fields.labels || [];
+    const currentLabels = (jiraIssue.fields.labels as string[]) || [];
 
     // Add re-workspace label if not already present
     if (!currentLabels.includes('re-workspace')) {
@@ -101,8 +87,8 @@ class IssueRefiner {
   }
 
   private async determineTargetDirectory(jiraIssue: JiraIssue): Promise<string> {
-    const issueType = jiraIssue.fields.issuetype.name.toLowerCase();
-    const component = jiraIssue.fields.components?.[0]?.name || 'unknown';
+    const issueType = (jiraIssue.fields.issuetype as any)?.name?.toLowerCase() || 'unknown';
+    const component = (jiraIssue.fields.components as any)?.[0]?.name || 'unknown';
 
     // Determine base directory based on component
     let baseDir: string;
@@ -116,7 +102,7 @@ class IssueRefiner {
 
     // For epics, create epic directory
     if (issueType === 'epic') {
-      const epicName = this.generateEpicDirectoryName(jiraIssue.fields.summary);
+      const epicName = this.generateEpicDirectoryName(jiraIssue.fields.summary as string);
       return path.join(baseDir, epicName);
     }
 
@@ -158,19 +144,19 @@ class IssueRefiner {
   }
 
   private generateFileName(jiraIssue: JiraIssue): string {
-    const issueType = jiraIssue.fields.issuetype.name.toLowerCase();
+    const issueType = (jiraIssue.fields.issuetype as any)?.name?.toLowerCase() || 'unknown';
     const key = jiraIssue.key;
 
     return `${issueType}-${key}.md`;
   }
 
   private generateMarkdownContent(jiraIssue: JiraIssue): string {
-    const issueType = jiraIssue.fields.issuetype.name;
-    const workstream = jiraIssue.fields.customfield_12401?.value || 'IaC';
-    const initiative = jiraIssue.fields.customfield_12400?.value || 'Private Cloud 2.0';
-    const components = jiraIssue.fields.components?.map((c) => c.name) || ['idp-infra'];
-    const labels = [...(jiraIssue.fields.labels || []), 'workspace'];
-    const points = jiraIssue.fields.customfield_10006 || null;
+    const issueType = (jiraIssue.fields.issuetype as any)?.name || 'Unknown';
+    const workstream = (jiraIssue.fields.customfield_12401 as any)?.value || 'IaC';
+    const initiative = (jiraIssue.fields.customfield_12400 as any)?.value || 'Private Cloud 2.0';
+    const components = (jiraIssue.fields.components as any)?.map((c: any) => c.name) || ['idp-infra'];
+    const labels = [...((jiraIssue.fields.labels as string[]) || []), 'workspace'];
+    const points = (jiraIssue.fields.customfield_10006 as number) || null;
 
     const frontmatter = {
       properties: {
@@ -180,7 +166,7 @@ class IssueRefiner {
         initiative: initiative,
         components: components,
         labels: labels,
-        status: jiraIssue.fields.status.name,
+        status: (jiraIssue.fields.status as any)?.name || 'Unknown',
         points: points,
       },
       mapping: {

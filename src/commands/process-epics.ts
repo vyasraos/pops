@@ -47,7 +47,7 @@ export const processEpicsCommand = {
       // Handle single issue processing
       if (argv.issue) {
         console.log(chalk.blue(`🔍 Processing single issue: ${argv.issue}...\n`));
-        await processor.processSingleIssue(argv.issue);
+        await processor.processSingleIssue(argv.issue as string);
         console.log(chalk.green(`✅ Issue ${argv.issue} processed successfully!`));
         return;
       }
@@ -83,9 +83,9 @@ export const processEpicsCommand = {
           console.log(chalk.blue(`\n📁 Component: ${component}`));
 
           for (const [epicName, issues] of epicMap) {
-            const epic = issues.find((issue) => issue.fields.issuetype.name === 'Epic');
-            const stories = issues.filter((issue) => issue.fields.issuetype.name === 'Story');
-            const tasks = issues.filter((issue) => issue.fields.issuetype.name === 'Task');
+            const epic = issues.find((issue) => (issue.fields.issuetype as any)?.name === 'Epic');
+            const stories = issues.filter((issue) => (issue.fields.issuetype as any)?.name === 'Story');
+            const tasks = issues.filter((issue) => (issue.fields.issuetype as any)?.name === 'Task');
 
             if (argv.epic && epic && epic.key !== argv.epic) {
               continue;
@@ -115,7 +115,7 @@ export const processEpicsCommand = {
         console.log(chalk.blue(`🎯 Processing epic: ${argv.epic}`));
       }
 
-      const results = await processor.processEpics(argv.component, argv.epic);
+      const results = await processor.processEpics(argv.component as string, argv.epic as string);
 
       if (results.length === 0) {
         console.log(chalk.yellow('⚠️  No epics found to process'));

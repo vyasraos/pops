@@ -40,14 +40,14 @@ export class MarkdownProcessor {
       }
 
       // Determine issue type
-      const issueType = issueData.fields.issuetype.name.toLowerCase();
+      const issueType = (issueData.fields.issuetype as any)?.name?.toLowerCase() || 'unknown';
       const type = issueType === 'epic' ? 'epic' : issueType === 'task' ? 'task' : 'story';
 
       // Generate markdown
       const markdown = await this.generateMarkdown(issueData, type);
 
       // Determine target directory based on component and issue type
-      const component = issueData.fields.components?.[0]?.name || 'unknown';
+      const component = (issueData.fields.components as any)?.[0]?.name || 'unknown';
       const targetDir = this.determineTargetDirectory(component, issueData, type);
 
       // Ensure target directory exists
@@ -101,7 +101,7 @@ export class MarkdownProcessor {
 
     if (type === 'epic') {
       // For epics, create epic directory
-      const epicName = this.generateEpicDirectoryName(issueData.fields.summary);
+      const epicName = this.generateEpicDirectoryName(issueData.fields.summary as string);
       return path.join(baseDir, epicName);
     }
 
@@ -139,7 +139,7 @@ export class MarkdownProcessor {
 
       for (const [_component, epicMap] of dataStructure) {
         for (const [_epicName, issues] of epicMap) {
-          const epic = issues.find((issue) => issue.fields.issuetype.name === 'Epic');
+          const epic = issues.find((issue) => (issue.fields.issuetype as any)?.name === 'Epic');
           if (epic) {
             const correctComponent = this.determineCorrectComponent(epic);
             const correctEpicDir = this.determineCorrectEpicDirectory(epic);
@@ -204,10 +204,10 @@ export class MarkdownProcessor {
 
     try {
       // Separate issues by type
-      const epic = issues.find((issue) => issue.fields.issuetype.name === 'Epic');
-      const stories = issues.filter((issue) => issue.fields.issuetype.name === 'Story');
-      const tasks = issues.filter((issue) => issue.fields.issuetype.name === 'Task');
-      const spikes = issues.filter((issue) => issue.fields.issuetype.name === 'Spike');
+      const epic = issues.find((issue) => (issue.fields.issuetype as any)?.name === 'Epic');
+      const stories = issues.filter((issue) => (issue.fields.issuetype as any)?.name === 'Story');
+      const tasks = issues.filter((issue) => (issue.fields.issuetype as any)?.name === 'Task');
+      const spikes = issues.filter((issue) => (issue.fields.issuetype as any)?.name === 'Spike');
 
       if (!epic) {
         throw new Error(`No epic found in epic group: ${epicName}`);
@@ -527,7 +527,7 @@ export class MarkdownProcessor {
 
   private determineCorrectComponent(epic: IssueRawData): string {
     // Get component from epic's Jira data
-    const components = epic.fields.components || [];
+    const components = (epic.fields.components as any) || [];
     if (components.length > 0) {
       return components[0].name; // Use first component as primary
     }
@@ -542,7 +542,7 @@ export class MarkdownProcessor {
     let epicName = epic.fields.summary || epic.key;
 
     // Clean up the name for folder use
-    epicName = epicName
+    epicName = (epicName as string)
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
       .replace(/\s+/g, '-') // Replace spaces with hyphens
@@ -572,7 +572,7 @@ export class MarkdownProcessor {
       }
 
       // Check 2: Component validation - does this issue belong to the expected component?
-      const issueComponents = issue.fields.components || [];
+      const issueComponents = (issue.fields.components as any) || [];
       const issueComponentNames = issueComponents.map((comp: any) => comp.name);
 
       if (!issueComponentNames.includes(expectedComponent)) {
@@ -612,8 +612,8 @@ export class MarkdownProcessor {
         // Epic link could be a string (epic key) or object with key property
         if (typeof epicLink === 'string') {
           return epicLink;
-        } else if (epicLink && typeof epicLink === 'object' && epicLink.key) {
-          return epicLink.key;
+        } else if (epicLink && typeof epicLink === 'object' && (epicLink as any).key) {
+          return (epicLink as any).key;
         }
       }
     }

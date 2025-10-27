@@ -5,6 +5,7 @@ import * as yaml from 'js-yaml';
 import type { CommandModule } from 'yargs';
 import { JiraApiClient } from '../services/jira-api-client';
 import { logger } from '../utils/logger';
+import { POPSConfig } from '../utils/pops-config';
 import type { JiraIssue } from '../types';
 
 interface IssueReworkArgs {
@@ -13,9 +14,11 @@ interface IssueReworkArgs {
 
 class IssueReworker {
   private jiraClient: JiraApiClient;
+  private popsConfig: POPSConfig;
 
   constructor() {
     this.jiraClient = new JiraApiClient();
+    this.popsConfig = new POPSConfig();
   }
 
   async run(issueKey: string): Promise<void> {
@@ -237,7 +240,10 @@ ${description}
           foundFiles.push(...subFiles);
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
           // Check if it's an issue file with the matching key
-          if (entry.name.match(/^(epic|story|task|bug|sub-task)-POP-\d+\.md$/i)) {
+          const config = this.popsConfig.getConfig();
+          const projectKey = config.jira?.project || 'GVT';
+          const projectRegex = new RegExp(`^(epic|story|task|bug|sub-task)-${projectKey}-\\d+\\.md$`, 'i');
+          if (entry.name.match(projectRegex)) {
             try {
               const content = await fs.readFile(fullPath, 'utf8');
               const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);

@@ -7,6 +7,7 @@ import type { CommandModule } from 'yargs';
 import { JiraDataService } from '../services/jira-data-service';
 import { MarkdownProcessor } from '../services/markdown-processor';
 import { logger } from '../utils/logger';
+import { POPSConfig } from '../utils/pops-config';
 
 interface ValidateIssuesArgs {
   issueKey?: string;
@@ -36,11 +37,13 @@ class IssueValidator {
   private templatesPath: string;
   private dataService: JiraDataService;
   private processor: MarkdownProcessor;
+  private popsConfig: POPSConfig;
 
   constructor() {
     this.templatesPath = 'templates/planning';
     this.dataService = new JiraDataService();
     this.processor = new MarkdownProcessor();
+    this.popsConfig = new POPSConfig();
   }
 
   async run(args: ValidateIssuesArgs): Promise<void> {
@@ -502,7 +505,10 @@ class IssueValidator {
           foundFiles.push(...subFiles);
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
           // Check if it's an issue file with the matching key
-          if (entry.name.match(/^(epic|story|task|bug|sub-task)-POP-\d+\.md$/i)) {
+          const config = this.popsConfig.getConfig();
+          const projectKey = config.jira?.project || 'GVT';
+          const projectRegex = new RegExp(`^(epic|story|task|bug|sub-task)-${projectKey}-\\d+\\.md$`, 'i');
+          if (entry.name.match(projectRegex)) {
             try {
               const content = await fs.readFile(fullPath, 'utf8');
               const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);

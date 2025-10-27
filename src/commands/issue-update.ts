@@ -85,7 +85,7 @@ class IssueUpdater {
 
       // Build Jira fields using mapping
       console.log(chalk.blue('\n🚀 Updating issue in Jira...'));
-      let jiraFields: any = {
+      let jiraFields: JiraFields = {
         summary: summary.trim(),
         description: description.trim(),
       };
@@ -125,7 +125,7 @@ class IssueUpdater {
   }
 
   private parseMarkdown(content: string): {
-    frontmatter: any;
+    frontmatter: Record<string, unknown>;
     summary: string;
     description: string;
   } {
@@ -134,7 +134,7 @@ class IssueUpdater {
       throw new Error('No frontmatter found in markdown file');
     }
 
-    const frontmatter = yaml.load(frontmatterMatch[1]) as any;
+    const frontmatter = yaml.load(frontmatterMatch[1]) as Record<string, unknown>;
 
     // Extract summary and description
     const summaryMatch = content.match(/## Summary\n\n(.*?)(?=\n\n##|$)/s);
@@ -221,7 +221,7 @@ class IssueUpdater {
   }
 }
 
-export const issueUpdateCommand: CommandModule<{}, IssueUpdateArgs> = {
+export const issueUpdateCommand: CommandModule<Record<string, never>, IssueUpdateArgs> = {
   command: 'update-issue [file]',
   describe: 'Update an existing Jira issue with dynamic field mapping support',
   builder: (yargs) => {

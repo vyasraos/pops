@@ -5,7 +5,6 @@ import * as yaml from 'js-yaml';
 import type { CommandModule } from 'yargs';
 import { JiraApiClient } from '../services/jira-api-client';
 import { logger } from '../utils/logger';
-import { POPSConfig } from '../utils/pops-config';
 
 interface IssueRefineArgs {
   issueKey: string;

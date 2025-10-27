@@ -84,10 +84,10 @@ export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 export interface IssueRawData {
   id: string;
   key: string;
-  fields: Record<string, any>;
+  fields: Record<string, unknown>;
   expand?: string;
-  renderedFields?: Record<string, any>;
-  changelog?: any;
+  renderedFields?: Record<string, unknown>;
+  changelog?: unknown;
   self?: string;
 }
 

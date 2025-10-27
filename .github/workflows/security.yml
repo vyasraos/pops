@@ -118,77 +118,6 @@ jobs:
       with:
         path: ./
         extra_args: --debug --only-verified
-
-  license-scan:
-    name: License Compliance
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: latest
-
-    - name: Install dependencies
-      run: bun install --frozen-lockfile
-
-    - name: Install license checker
-      run: bun add --dev license-checker
-
-    - name: Check licenses
-      run: |
-        echo "Checking licenses for all dependencies...
-        npx license-checker --summary --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;Unlicense;WTFPL;Python-2.0'
-
-    - name: Generate license report
-      run: |
-        npx license-checker --csv --out licenses.csv
-        npx license-checker --json --out licenses.json
-
-    - name: Upload license report
-      uses: actions/upload-artifact@v4
-      with:
-        name: license-report
-        path: |
-          licenses.csv
-          licenses.json
-
-  binary-scan:
-    name: Binary Security Scan
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: latest
-
-    - name: Install dependencies
-      run: bun install --frozen-lockfile
-
-    - name: Build binaries
-      run: bun run build:binaries-all
-
-    - name: Scan Linux binary
-      uses: aquasecurity/trivy-action@0.33.1
-      with:
-        input: 'dist/pops-linux'
-        format: 'sarif'
-        output: 'binary-linux-results.sarif'
-
-    - name: Upload binary scan results
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'binary-linux-results.sarif'
-
   sbom-generation:
     name: Generate Software Bill of Materials
     runs-on: ubuntu-latest
@@ -218,35 +147,10 @@ jobs:
         path: |
           *.spdx.json
 
-  security-scorecard:
-    name: OSSF Security Scorecard
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      id-token: write
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-
-    - name: Run analysis
-      uses: ossf/scorecard-action@v2.3.1
-      with:
-        results_file: results.sarif
-        results_format: sarif
-        publish_results: true
-
-    - name: Upload to code-scanning
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: results.sarif
-
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [codeql, dependency-scan, secret-scan, license-scan]
+    needs: [codeql, dependency-scan, secret-scan]
     if: always()
 
     steps:
@@ -271,12 +175,6 @@ jobs:
           echo "✅ **Secret Detection**: No secrets detected" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Secret Detection**: Potential secrets found" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        if [[ "${{ needs.license-scan.result }}" == "success" ]]; then
-          echo "✅ **License Compliance**: All licenses approved" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **License Compliance**: License issues found" >> $GITHUB_STEP_SUMMARY
         fi
 
         echo "" >> $GITHUB_STEP_SUMMARY

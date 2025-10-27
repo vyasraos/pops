@@ -140,7 +140,7 @@ export class JiraDataService {
     return result;
   }
 
-  private generateEpicFolderName(epic: any): string {
+  private generateEpicFolderName(epic: JiraIssue): string {
     // Extract epic name from summary or custom field
     let epicName = epic.fields.summary || epic.key;
 
@@ -155,7 +155,7 @@ export class JiraDataService {
     return `epic-${epicName}`;
   }
 
-  private async saveIssueData(issueJson: any, filePath: string): Promise<void> {
+  private async saveIssueData(issueJson: Record<string, unknown>, filePath: string): Promise<void> {
     try {
       const jsonContent = JSON.stringify(issueJson, null, 2);
       await fs.writeFile(filePath, jsonContent, 'utf8');

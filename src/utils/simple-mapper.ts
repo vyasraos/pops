@@ -13,6 +13,9 @@ interface JiraFieldMapping {
 
 interface JiraFields {
   [fieldName: string]: unknown;
+  fields?: {
+    [fieldName: string]: unknown;
+  };
 }
 
 
@@ -53,7 +56,7 @@ export class SimpleMapper {
     }
 
     // Return only the fields object, not the nested api.fields structure
-    return (fields as any).fields || fields;
+    return fields.fields || fields;
   }
 
   /**
@@ -115,12 +118,12 @@ export class SimpleMapper {
 
     // Check if it's a value-based custom field (like select fields)
     if (path.includes('.value')) {
-      (obj as any).fields = (obj as any).fields || {};
-      (obj as any).fields[customFieldId] = { value: value };
+      obj.fields = obj.fields || {};
+      obj.fields[customFieldId] = { value: value };
     } else {
       // Direct value custom field (like number fields)
-      (obj as any).fields = (obj as any).fields || {};
-      (obj as any).fields[customFieldId] = value;
+      obj.fields = obj.fields || {};
+      obj.fields[customFieldId] = value;
     }
   }
 
@@ -133,8 +136,8 @@ export class SimpleMapper {
       value = [value];
     }
 
-    (obj as any).fields = (obj as any).fields || {};
-    (obj as any).fields.components = (value as unknown[]).map((component: unknown) => {
+    obj.fields = obj.fields || {};
+    obj.fields.components = (value as unknown[]).map((component: unknown) => {
       if (typeof component === 'string') {
         return { name: component };
       }
@@ -151,8 +154,8 @@ export class SimpleMapper {
       value = [value];
     }
 
-    (obj as any).fields = (obj as any).fields || {};
-    (obj as any).fields.labels = value;
+    obj.fields = obj.fields || {};
+    obj.fields.labels = value;
   }
 
   /**
@@ -160,8 +163,8 @@ export class SimpleMapper {
    * Example: api.fields.issuetype.name -> { issuetype: { name: "Story" } }
    */
   private handleIssueType(obj: JiraFields, _path: string, value: unknown): void {
-    (obj as any).fields = (obj as any).fields || {};
-    (obj as any).fields.issuetype = { name: value };
+    obj.fields = obj.fields || {};
+    obj.fields.issuetype = { name: value };
   }
 
   /**
@@ -169,7 +172,7 @@ export class SimpleMapper {
    * Example: api.fields.status.name -> { status: { name: "To Do" } }
    */
   private handleStatus(obj: JiraFields, _path: string, value: unknown): void {
-    (obj as any).fields = (obj as any).fields || {};
-    (obj as any).fields.status = { name: value };
+    obj.fields = obj.fields || {};
+    obj.fields.status = { name: value };
   }
 }

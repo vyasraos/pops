@@ -39,7 +39,7 @@ export const processEpicsCommand = {
       .example('$0 process-epics --epic POP-1234', 'Process specific epic')
       .example('$0 process-epics --dry-run', 'Show what would be processed');
   },
-  handler: async (argv: any) => {
+  handler: async (argv: Record<string, unknown>) => {
     try {
       const dataService = new JiraDataService();
       const processor = new MarkdownProcessor();

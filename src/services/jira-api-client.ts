@@ -67,7 +67,7 @@ export class JiraApiClient {
 
         // Pass through original Jira error messages
         if (error.response?.data && typeof error.response.data === 'object') {
-          const errorData = error.response.data as any;
+          const errorData = error.response.data as Record<string, unknown>;
           let errorMessage = 'JIRA API Error: ';
 
           // Handle different JIRA error response formats
@@ -125,7 +125,7 @@ export class JiraApiClient {
         key: project.key,
         name: project.name,
         description: project.description,
-        issueTypes: project.issueTypes?.map((it: any) => ({
+        issueTypes: project.issueTypes?.map((it: Record<string, unknown>) => ({
           id: it.id,
           name: it.name,
           description: it.description,
@@ -142,7 +142,7 @@ export class JiraApiClient {
 
   // New methods for data-driven approach
 
-  async getIssue(issueKey: string): Promise<any> {
+  async getIssue(issueKey: string): Promise<JiraIssue | undefined> {
     try {
       const client = await this.getClient();
 
@@ -178,7 +178,7 @@ export class JiraApiClient {
     }
   }
 
-  async getIssueChildren(parentKey: string): Promise<any[]> {
+  async getIssueChildren(parentKey: string): Promise<JiraIssue[] | undefined> {
     try {
       const client = await this.getClient();
       const tomlConfig = this.popsConfig.getConfig();
@@ -269,7 +269,7 @@ export class JiraApiClient {
     }
   }
 
-  async getEpicsByComponent(componentName: string): Promise<any[]> {
+  async getEpicsByComponent(componentName: string): Promise<JiraIssue[] | undefined> {
     try {
       const client = await this.getClient();
       const tomlConfig = this.popsConfig.getConfig();
@@ -297,7 +297,7 @@ export class JiraApiClient {
     }
   }
 
-  async getAllEpicsByComponent(componentName: string): Promise<any[]> {
+  async getAllEpicsByComponent(componentName: string): Promise<JiraIssue[] | undefined> {
     try {
       const client = await this.getClient();
       const tomlConfig = this.popsConfig.getConfig();
@@ -350,7 +350,7 @@ export class JiraApiClient {
   }
 
   // Issue creation method
-  async createIssue(payload: any): Promise<any> {
+  async createIssue(payload: Record<string, unknown>): Promise<JiraIssue | undefined> {
     try {
       const client = await this.getClient();
       const response = await client.post('/issue', payload);
@@ -362,7 +362,7 @@ export class JiraApiClient {
     }
   }
 
-  async updateIssue(issueKey: string, payload: any): Promise<any> {
+  async updateIssue(issueKey: string, payload: Record<string, unknown>): Promise<JiraIssue | undefined> {
     try {
       const client = await this.getClient();
       const response = await client.put(`/issue/${issueKey}`, payload);
@@ -381,7 +381,7 @@ export class JiraApiClient {
 
   // Private helper methods
 
-  private mapComponent(component: any): JiraComponent {
+  private mapComponent(component: Record<string, unknown>): JiraComponent {
     return {
       id: component.id,
       name: component.name,

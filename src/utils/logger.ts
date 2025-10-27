@@ -13,35 +13,35 @@ class Logger {
     return levels.indexOf(level) <= levels.indexOf(this.logLevel);
   }
 
-  error(message: string, ...args: any[]) {
+  error(message: string, ...args: unknown[]) {
     if (this.shouldLog('error')) {
       console.error(chalk.red(`❌ ERROR: ${message}`), ...args);
     }
   }
 
-  warn(message: string, ...args: any[]) {
+  warn(message: string, ...args: unknown[]) {
     if (this.shouldLog('warn')) {
       console.warn(chalk.yellow(`⚠️  WARN: ${message}`), ...args);
     }
   }
 
-  info(message: string, ...args: any[]) {
+  info(message: string, ...args: unknown[]) {
     if (this.shouldLog('info')) {
       console.log(chalk.blue(`ℹ️  INFO: ${message}`), ...args);
     }
   }
 
-  debug(message: string, ...args: any[]) {
+  debug(message: string, ...args: unknown[]) {
     if (this.shouldLog('debug')) {
       console.log(chalk.gray(`🐛 DEBUG: ${message}`), ...args);
     }
   }
 
-  success(message: string, ...args: any[]) {
+  success(message: string, ...args: unknown[]) {
     console.log(chalk.green(`✅ ${message}`), ...args);
   }
 
-  log(message: string, ...args: any[]) {
+  log(message: string, ...args: unknown[]) {
     console.log(message, ...args);
   }
 }

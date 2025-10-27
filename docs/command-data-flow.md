@@ -43,6 +43,7 @@ graph TB
     
     WORKSPACE -->|Read| PROMOTE
     PROMOTE -->|Update Labels| JIRA
+    PROMOTE -->|Remove File| WORKSPACE
     
     JIRA -->|Fetch| REWORK
     REWORK -->|Generate MD| WORKSPACE
@@ -127,6 +128,10 @@ sequenceDiagram
     POPS->>POPS: Get promotion targets
     POPS->>JiraAPI: Update labels
     JiraAPI-->>POPS: Confirm label update
+    POPS->>JiraAPI: Fetch updated issue
+    JiraAPI-->>POPS: Return updated data
+    POPS->>FileSystem: Process to target increment
+    POPS->>FileSystem: Remove workspace file
 ```
 
 ### 5. Issue Rework Workflow

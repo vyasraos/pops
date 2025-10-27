@@ -194,6 +194,9 @@ _workspace/*.md → IssuePromoter → Jira API (label update)
 2. Verify issue has 'workspace' label
 3. Get promotion targets from `.config/scope.yaml`
 4. Update Jira issue labels (remove 'workspace', add target label)
+5. Fetch updated issue from Jira
+6. Process issue to target increment directory
+7. Remove original workspace file
 
 **Usage**:
 ```bash

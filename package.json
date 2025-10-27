@@ -21,7 +21,7 @@
     "lint": "bun run eslint src/**/*.ts",
     "type-check": "bun run tsc --noEmit",
     "link": "bun link",
-    "unlink": "bun unlink pops-cli",
+    "unlink": "bun unlink pops",
     "release": "bun run build:binaries-all"
   },
   "keywords": [

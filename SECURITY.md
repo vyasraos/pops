@@ -181,13 +181,13 @@ Users should regularly update POPS CLI:
 pops --version
 
 # Update via Homebrew
-brew upgrade pops-cli
+brew upgrade pops
 
 # Update via npm
-npm update -g pops-cli
+npm update -g pops
 
 # Update binary manually
-curl -fsSL https://github.com/vyasraos/pops-cli/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/vyasraos/pops/releases/latest/download/install.sh | sh
 ```
 
 ## Security Contact
@@ -195,7 +195,7 @@ curl -fsSL https://github.com/vyasraos/pops-cli/releases/latest/download/install
 For security-related questions or concerns:
 
 - **Security Issues**: [INSERT SECURITY EMAIL]
-- **General Security Questions**: Create a discussion in our [GitHub Discussions](https://github.com/vyasraos/pops-cli/discussions)
+- **General Security Questions**: Create a discussion in our [GitHub Discussions](https://github.com/vyasraos/pops/discussions)
 
 ## Acknowledgments
 

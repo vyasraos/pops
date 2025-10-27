@@ -15,8 +15,8 @@ Thank you for your interest in contributing to POPS CLI! This guide will help yo
 
 ```bash
 # Clone the repository
-git clone https://github.com/vyasraos/pops-cli.git
-cd pops-cli
+git clone https://github.com/vyasraos/pops.git
+cd pops
 
 # Install dependencies
 bun install
@@ -71,7 +71,7 @@ bun run format
 ## Project Structure
 
 ```
-pops-cli/
+pops/
 ├── src/
 │   ├── commands/        # CLI command implementations
 │   │   ├── validate.ts
@@ -388,9 +388,9 @@ The project uses GitHub Actions for:
 
 ```bash
 # Fork the repo on GitHub, then:
-git clone https://github.com/your-username/pops-cli.git
-cd pops-cli
-git remote add upstream https://github.com/vyasraos/pops-cli.git
+git clone https://github.com/your-username/pops.git
+cd pops
+git remote add upstream https://github.com/vyasraos/pops.git
 ```
 
 ### 2. Create Feature Branch
@@ -423,8 +423,8 @@ git push origin feature/my-new-feature
 
 ## Getting Help
 
-- **Issues**: Report bugs and request features on [GitHub Issues](https://github.com/vyasraos/pops-cli/issues)
-- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/vyasraos/pops-cli/discussions)
+- **Issues**: Report bugs and request features on [GitHub Issues](https://github.com/vyasraos/pops/issues)
+- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/vyasraos/pops/discussions)
 - **Code review**: Maintainers will review PRs and provide feedback
 
 ## License

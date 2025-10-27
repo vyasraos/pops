@@ -25,7 +25,7 @@ cd homebrew-tap
 mkdir -p Formula
 
 # Copy the formula template
-cp ../pops-cli/homebrew-formula.rb Formula/pops-cli.rb
+cp ../pops/homebrew-formula.rb Formula/pops.rb
 
 # Create README
 cat > README.md << 'EOF'
@@ -40,12 +40,12 @@ This is the official Homebrew tap for vyasraos projects.
 brew tap vyasraos/tap
 
 # Install POPS CLI
-brew install pops-cli
+brew install pops
 ```
 
 ## Available Formulas
 
-- **pops-cli**: Playbook Operations CLI - A tool for Jira management and project automation
+- **pops**: Playbook Operations CLI - A tool for Jira management and project automation
 
 ## Updating
 
@@ -53,7 +53,7 @@ Formulas are automatically updated when new releases are published.
 
 ## Issues
 
-Report issues with the Homebrew formula at: https://github.com/vyasraos/pops-cli/issues
+Report issues with the Homebrew formula at: https://github.com/vyasraos/pops/issues
 EOF
 
 # Initial commit
@@ -64,7 +64,7 @@ git push origin main
 
 ### 3. Configure GitHub Secrets
 
-In the main `pops-cli` repository, add the following secrets:
+In the main `pops` repository, add the following secrets:
 
 ```bash
 # GitHub Personal Access Token with repo permissions
@@ -78,11 +78,11 @@ SONAR_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ```bash
 # Test locally
-brew install --formula ./Formula/pops-cli.rb
+brew install --formula ./Formula/pops.rb
 
 # Test the tap
 brew tap vyasraos/tap
-brew install pops-cli
+brew install pops
 
 # Verify installation
 pops --version
@@ -91,7 +91,7 @@ pops --help
 
 ## Automatic Updates
 
-The GitHub Actions workflow in `pops-cli` will automatically:
+The GitHub Actions workflow in `pops` will automatically:
 
 1. **Update the formula** when a new release is created
 2. **Calculate new SHA256** checksums for binaries
@@ -141,15 +141,15 @@ git clone https://github.com/vyasraos/homebrew-tap.git
 cd homebrew-tap
 
 # Update the formula manually
-vim Formula/pops-cli.rb
+vim Formula/pops.rb
 
 # Test the formula
-brew install --formula ./Formula/pops-cli.rb
-brew test pops-cli
+brew install --formula ./Formula/pops.rb
+brew test pops
 
 # Commit and push
-git add Formula/pops-cli.rb
-git commit -m "Update pops-cli to vX.Y.Z"
+git add Formula/pops.rb
+git commit -m "Update pops to vX.Y.Z"
 git push origin main
 ```
 

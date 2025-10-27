@@ -10,7 +10,7 @@
       "pattern": "^https://your-company.atlassian.net"
     },
     {
-      "pattern": "^https://github.com/vyasraos/pops-cli/releases/download"
+      "pattern": "^https://github.com/vyasraos/pops/releases/download"
     }
   ],
   "replacementPatterns": [

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # POPS CLI Installation Script
-# Usage: curl -fsSL https://github.com/vyasraos/pops-cli/releases/latest/download/install.sh | sh
+# Usage: curl -fsSL https://github.com/vyasraos/pops/releases/latest/download/install.sh | sh
 
 set -e
 

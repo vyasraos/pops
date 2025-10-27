@@ -42,5 +42,5 @@ tasks:
     desc: Remove global POPS CLI binary
     cmds:
       - echo "🗑️  Removing global POPS CLI..."
-      - bun unlink pops-cli
+      - bun unlink pops
       - echo "✅ POPS CLI removed from global binaries"

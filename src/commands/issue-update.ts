@@ -7,6 +7,7 @@ import type { CommandModule } from 'yargs';
 import { JiraApiClient } from '../services/jira-api-client';
 import { logger } from '../utils/logger';
 import { SimpleMapper } from '../utils/simple-mapper';
+import { POPSConfig } from '../utils/pops-config';
 import type { JiraIssue } from '../types';
 
 interface IssueUpdateArgs {
@@ -24,10 +25,12 @@ interface WorkspaceIssue {
 class IssueUpdater {
   private jiraClient: JiraApiClient;
   private mapper: SimpleMapper;
+  private popsConfig: POPSConfig;
 
   constructor() {
     this.jiraClient = new JiraApiClient();
     this.mapper = new SimpleMapper();
+    this.popsConfig = new POPSConfig();
   }
 
   async run(issueKey: string): Promise<void> {
@@ -132,6 +135,11 @@ class IssueUpdater {
     try {
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
+      // Get project from config
+      const config = this.popsConfig.getConfig();
+      const projectKey = config.jira?.project || 'GVT';
+      const projectRegex = new RegExp(`^(epic|story|task|bug|sub-task)-${projectKey}-\\d+\\.md$`, 'i');
+
       for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
 
@@ -140,7 +148,7 @@ class IssueUpdater {
           await this.scanDirectory(fullPath, issues);
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
           // Check if it's an issue file (contains issue key pattern)
-          if (entry.name.match(/^(epic|story|task|bug|sub-task)-POP-\d+\.md$/i)) {
+          if (entry.name.match(projectRegex)) {
             try {
               const content = await fs.readFile(fullPath, 'utf8');
               const { frontmatter } = this.parseMarkdown(content);

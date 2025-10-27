@@ -30,12 +30,14 @@ class IssuePromoter {
   private dataService: JiraDataService;
   private processor: MarkdownProcessor;
   private mapper: SimpleMapper;
+  private popsConfig: POPSConfig;
 
   constructor() {
     this.jiraClient = new JiraApiClient();
     this.dataService = new JiraDataService();
     this.processor = new MarkdownProcessor();
     this.mapper = new SimpleMapper();
+    this.popsConfig = new POPSConfig();
   }
 
   async run(issueKey: string, target?: string): Promise<void> {
@@ -214,6 +216,11 @@ class IssuePromoter {
     try {
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
+      // Get project from config
+      const config = this.popsConfig.getConfig();
+      const projectKey = config.jira?.project || 'GVT';
+      const projectRegex = new RegExp(`^(epic|story|task|bug|sub-task)-${projectKey}-\\d+\\.md$`, 'i');
+
       for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
 
@@ -222,7 +229,7 @@ class IssuePromoter {
           await this.scanDirectory(fullPath, issues);
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
           // Check if it's an issue file (contains issue key pattern)
-          if (entry.name.match(/^(epic|story|task|bug|sub-task)-POP-\d+\.md$/i)) {
+          if (entry.name.match(projectRegex)) {
             try {
               const content = await fs.readFile(fullPath, 'utf8');
               const { frontmatter } = this.parseMarkdown(content);

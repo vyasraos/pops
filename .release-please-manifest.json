@@ -1,11 +1,9 @@
 {
-  "release-type": "node",
-  "packages": {
-    ".": {
-      "package-name": "pops",
-      "changelog-path": "CHANGELOG.md",
-      "version-file": "package.json"
-    }
+  ".": {
+    "release-type": "node",
+    "package-name": "pops",
+    "changelog-path": "CHANGELOG.md",
+    "version-file": "package.json"
   },
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,

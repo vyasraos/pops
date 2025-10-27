@@ -7,11 +7,11 @@ import { JiraApiClient } from '../services/jira-api-client';
 import { logger } from '../utils/logger';
 import type { JiraIssue } from '../types';
 
-interface IssueRefineArgs {
+interface IssueReworkArgs {
   issueKey: string;
 }
 
-class IssueRefiner {
+class IssueReworker {
   private jiraClient: JiraApiClient;
 
   constructor() {
@@ -20,10 +20,23 @@ class IssueRefiner {
 
   async run(issueKey: string): Promise<void> {
     try {
-      console.log(chalk.blue(`🔍 Refining Jira issue: ${issueKey}...\n`));
+      console.log(chalk.blue(`🔍 Reworking Jira issue: ${issueKey}...\n`));
 
-      // Fetch issue from Jira
-      console.log(chalk.blue('📥 Fetching issue from Jira...'));
+      // First check if issue exists in workspace
+      const existingFile = await this.findFileInWorkspace(issueKey);
+      if (existingFile) {
+        console.log(chalk.green(`✅ Found existing issue in workspace: ${existingFile}`));
+        console.log(chalk.blue('📝 You can now edit the markdown file to rework the content'));
+        console.log(chalk.blue(`   File: ${path.relative(process.cwd(), existingFile)}`));
+        console.log(chalk.blue('\n📋 Next steps:'));
+        console.log(chalk.blue(`   1. Edit the markdown file to rework the content`));
+        console.log(chalk.blue(`   2. Run: pops update-issue ${issueKey}`));
+        console.log(chalk.blue(`   3. Run: pops promote-issue ${issueKey} --target FY26Q1`));
+        return;
+      }
+
+      // Issue not found in workspace, fetch from Jira
+      console.log(chalk.blue('📥 Issue not found in workspace, fetching from Jira...'));
       const jiraIssue = await this.jiraClient.getIssue(issueKey);
 
       if (!jiraIssue) {
@@ -51,17 +64,17 @@ class IssueRefiner {
       // Write markdown file
       await fs.writeFile(filePath, markdownContent, 'utf8');
 
-      console.log(chalk.green('\n✅ Issue refined successfully!'));
+      console.log(chalk.green('\n✅ Issue reworked successfully!'));
       console.log(chalk.green(`   Key: ${issueKey}`));
       console.log(chalk.green(`   File: ${path.relative(process.cwd(), filePath)}`));
       console.log(chalk.blue('\n📋 Next steps:'));
-      console.log(chalk.blue('   1. Edit the markdown file to refine the content'));
-      console.log(chalk.blue(`   2. Run: pops update-issue ${filePath}`));
-      console.log(chalk.blue(`   3. Run: pops promote-issue ${filePath} --target FY26Q1`));
+      console.log(chalk.blue('   1. Edit the markdown file to rework the content'));
+      console.log(chalk.blue(`   2. Run: pops update-issue ${issueKey}`));
+      console.log(chalk.blue(`   3. Run: pops promote-issue ${issueKey} --target FY26Q1`));
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(chalk.red(`❌ Failed to refine issue: ${errorMessage}`));
-      logger.error('Issue refinement failed:', error);
+      console.error(chalk.red(`❌ Failed to rework issue: ${errorMessage}`));
+      logger.error('Issue rework failed:', error);
       throw error;
     }
   }
@@ -196,11 +209,61 @@ ${jiraIssue.fields.summary}
 ${description}
 `;
   }
+
+  private async findFileInWorkspace(issueKey: string): Promise<string | null> {
+    const workspacePath = path.join(process.cwd(), 'planning', 'increments', '_workspace');
+    
+    try {
+      const files = await this.scanWorkspaceForIssue(workspacePath, issueKey);
+      return files.length > 0 ? files[0] : null;
+    } catch (error) {
+      logger.warn('Failed to scan workspace for issue:', error);
+      return null;
+    }
+  }
+
+  private async scanWorkspaceForIssue(dirPath: string, issueKey: string): Promise<string[]> {
+    const foundFiles: string[] = [];
+    
+    try {
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry.name);
+
+        if (entry.isDirectory()) {
+          // Recursively scan subdirectories
+          const subFiles = await this.scanWorkspaceForIssue(fullPath, issueKey);
+          foundFiles.push(...subFiles);
+        } else if (entry.isFile() && entry.name.endsWith('.md')) {
+          // Check if it's an issue file with the matching key
+          if (entry.name.match(/^(epic|story|task|bug|sub-task)-POP-\d+\.md$/i)) {
+            try {
+              const content = await fs.readFile(fullPath, 'utf8');
+              const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+              if (frontmatterMatch) {
+                const frontmatter = yaml.load(frontmatterMatch[1]) as any;
+                if (frontmatter.properties?.key === issueKey) {
+                  foundFiles.push(fullPath);
+                }
+              }
+            } catch (error) {
+              logger.warn(`Failed to parse file ${fullPath}:`, error);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn(`Failed to scan directory ${dirPath}:`, error);
+    }
+
+    return foundFiles;
+  }
 }
 
-export const issueRefineCommand: CommandModule<Record<string, never>, IssueRefineArgs> = {
-  command: 'refine-issue <issueKey>',
-  describe: 'Refine a Jira issue by fetching it and creating a markdown file for editing',
+export const issueReworkCommand: CommandModule<{}, IssueReworkArgs> = {
+  command: 'rework-issue <issueKey>',
+  describe: 'Rework a Jira issue by fetching it and creating a markdown file for editing',
   builder: (yargs) => {
     return yargs.positional('issueKey', {
       describe: 'Jira issue key (e.g., POP-1234)',
@@ -209,7 +272,7 @@ export const issueRefineCommand: CommandModule<Record<string, never>, IssueRefin
     });
   },
   handler: async (argv) => {
-    const refiner = new IssueRefiner();
-    await refiner.run(argv.issueKey);
+    const reworker = new IssueReworker();
+    await reworker.run(argv.issueKey);
   },
 };

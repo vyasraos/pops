@@ -12,7 +12,7 @@ import { POPSConfig } from '../utils/pops-config';
 import { SimpleMapper } from '../utils/simple-mapper';
 
 interface IssuePromoteArgs {
-  file?: string;
+  issueKey: string;
   target?: string;
 }
 
@@ -38,41 +38,16 @@ class IssuePromoter {
     this.mapper = new SimpleMapper();
   }
 
-  async run(filePath?: string, target?: string): Promise<void> {
+  async run(issueKey: string, target?: string): Promise<void> {
     try {
-      console.log(chalk.blue('🚀 Promoting Jira issue...\n'));
+      console.log(chalk.blue(`🚀 Promoting Jira issue: ${issueKey}...\n`));
 
-      // Get the file path
-      let targetFile: string;
-      if (filePath) {
-        targetFile = path.resolve(filePath);
-      } else {
-        // Get all workspace issues (only those with 'workspace' label)
-        const issues = await this.getWorkspaceIssuesForPromotion();
-
-        if (issues.length === 0) {
-          throw new Error('No workspace issues found for promotion');
-        }
-
-        const { selectedFile } = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'selectedFile',
-            message: 'Select workspace issue to promote',
-            choices: issues.map((issue) => ({
-              name: `${issue.key} - ${issue.summary} (${issue.component})`,
-              value: issue.filePath,
-              short: issue.key,
-            })),
-            pageSize: 10,
-            filter: (input: string) => {
-              // Enable search functionality
-              return input;
-            },
-          },
-        ]);
-        targetFile = selectedFile;
+      // Find file by issue key in _workspace
+      const foundFile = await this.findFileByKey(issueKey);
+      if (!foundFile) {
+        throw new Error(`Issue ${issueKey} not found in _workspace directory`);
       }
+      const targetFile = foundFile;
 
       // Read the markdown file
       const content = await fs.readFile(targetFile, 'utf8');
@@ -82,7 +57,6 @@ class IssuePromoter {
         throw new Error('Issue key not found in frontmatter');
       }
 
-      const issueKey = frontmatter.properties.key;
       const currentLabels = frontmatter.properties.labels || [];
 
       // Check if the issue has the workspace label
@@ -290,16 +264,23 @@ class IssuePromoter {
     const summaryMatch = content.match(/## Summary\n\n(.*?)(?=\n\n##|$)/s);
     return summaryMatch ? summaryMatch[1].trim() : 'No summary';
   }
+
+  private async findFileByKey(issueKey: string): Promise<string | null> {
+    const issues = await this.getWorkspaceIssuesForPromotion();
+    const issue = issues.find((i) => i.key === issueKey);
+    return issue ? issue.filePath : null;
+  }
 }
 
-export const issuePromoteCommand: CommandModule<Record<string, never>, IssuePromoteArgs> = {
-  command: 'promote-issue [file]',
+export const issuePromoteCommand: CommandModule<{}, IssuePromoteArgs> = {
+  command: 'promote-issue <issueKey>',
   describe: 'Promote a workspace issue to an increment',
   builder: (yargs) => {
     return yargs
-      .positional('file', {
-        describe: 'Path to the markdown file',
+      .positional('issueKey', {
+        describe: 'Jira issue key (e.g., POP-1234)',
         type: 'string',
+        demandOption: true,
       })
       .option('target', {
         alias: 't',
@@ -309,6 +290,6 @@ export const issuePromoteCommand: CommandModule<Record<string, never>, IssueProm
   },
   handler: async (argv) => {
     const promoter = new IssuePromoter();
-    await promoter.run(argv.file, argv.target);
+    await promoter.run(argv.issueKey, argv.target);
   },
 };

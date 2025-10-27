@@ -4,9 +4,12 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import * as yaml from 'js-yaml';
 import type { CommandModule } from 'yargs';
+import { JiraDataService } from '../services/jira-data-service';
+import { MarkdownProcessor } from '../services/markdown-processor';
 import { logger } from '../utils/logger';
 
 interface ValidateIssuesArgs {
+  issueKey?: string;
   file?: string;
   component?: string;
   epic?: string;
@@ -31,9 +34,13 @@ interface IssueContent {
 
 class IssueValidator {
   private templatesPath: string;
+  private dataService: JiraDataService;
+  private processor: MarkdownProcessor;
 
   constructor() {
     this.templatesPath = 'templates/planning';
+    this.dataService = new JiraDataService();
+    this.processor = new MarkdownProcessor();
   }
 
   async run(args: ValidateIssuesArgs): Promise<void> {
@@ -42,7 +49,27 @@ class IssueValidator {
 
       let filesToValidate: string[] = [];
 
-      if (args.file) {
+      if (args.issueKey) {
+        // Validate specific issue by key
+        const foundFile = await this.findFileByKey(args.issueKey);
+        if (foundFile) {
+          filesToValidate = [foundFile];
+          console.log(chalk.green(`✅ Found issue in workspace: ${foundFile}`));
+        } else {
+          // Issue not found locally, fetch and process it
+          console.log(chalk.blue(`📥 Issue ${args.issueKey} not found in workspace, fetching from Jira...`));
+          await this.fetchAndProcessIssue(args.issueKey);
+          
+          // Try to find the file again after processing
+          const foundFileAfterProcess = await this.findFileByKey(args.issueKey);
+          if (foundFileAfterProcess) {
+            filesToValidate = [foundFileAfterProcess];
+            console.log(chalk.green(`✅ Issue processed and found: ${foundFileAfterProcess}`));
+          } else {
+            throw new Error(`Failed to process issue ${args.issueKey}`);
+          }
+        }
+      } else if (args.file) {
         // Validate specific file
         filesToValidate = [path.resolve(args.file)];
       } else if (args.all) {
@@ -447,13 +474,82 @@ class IssueValidator {
       console.log(chalk.red(`\n❌ ${invalidCount} issue(s) need attention`));
     }
   }
+
+  private async findFileByKey(issueKey: string): Promise<string | null> {
+    const workspacePath = path.join(process.cwd(), 'planning', 'increments', '_workspace');
+    
+    try {
+      const files = await this.scanWorkspaceForIssue(workspacePath, issueKey);
+      return files.length > 0 ? files[0] : null;
+    } catch (error) {
+      logger.warn('Failed to scan workspace for issue:', error);
+      return null;
+    }
+  }
+
+  private async scanWorkspaceForIssue(dirPath: string, issueKey: string): Promise<string[]> {
+    const foundFiles: string[] = [];
+    
+    try {
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry.name);
+
+        if (entry.isDirectory()) {
+          // Recursively scan subdirectories
+          const subFiles = await this.scanWorkspaceForIssue(fullPath, issueKey);
+          foundFiles.push(...subFiles);
+        } else if (entry.isFile() && entry.name.endsWith('.md')) {
+          // Check if it's an issue file with the matching key
+          if (entry.name.match(/^(epic|story|task|bug|sub-task)-POP-\d+\.md$/i)) {
+            try {
+              const content = await fs.readFile(fullPath, 'utf8');
+              const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+              if (frontmatterMatch) {
+                const frontmatter = yaml.load(frontmatterMatch[1]) as any;
+                if (frontmatter.properties?.key === issueKey) {
+                  foundFiles.push(fullPath);
+                }
+              }
+            } catch (error) {
+              logger.warn(`Failed to parse file ${fullPath}:`, error);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn(`Failed to scan directory ${dirPath}:`, error);
+    }
+
+    return foundFiles;
+  }
+
+  private async fetchAndProcessIssue(issueKey: string): Promise<void> {
+    try {
+      console.log(chalk.blue('📥 Fetching issue from Jira...'));
+      await this.dataService.fetchSingleIssue(issueKey);
+      
+      console.log(chalk.blue('📝 Processing issue...'));
+      await this.processor.processSingleIssue(issueKey);
+      
+      console.log(chalk.green('✅ Issue fetched and processed successfully'));
+    } catch (error) {
+      logger.error('Failed to fetch and process issue:', error);
+      throw new Error(`Failed to fetch and process issue ${issueKey}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 }
 
 export const validateIssuesCommand: CommandModule<{}, ValidateIssuesArgs> = {
-  command: 'validate-issue [file]',
+  command: 'validate-issue [issueKey] [file]',
   describe: 'Validate issue summary and description against template specifications',
   builder: (yargs) => {
     return yargs
+      .positional('issueKey', {
+        describe: 'Jira issue key to validate (e.g., POP-1234)',
+        type: 'string',
+      })
       .positional('file', {
         describe: 'Path to specific issue file to validate',
         type: 'string',
@@ -475,9 +571,11 @@ export const validateIssuesCommand: CommandModule<{}, ValidateIssuesArgs> = {
         default: false,
       })
       .conflicts('file', ['component', 'epic', 'all'])
+      .conflicts('issueKey', ['component', 'epic', 'all'])
       .conflicts('component', ['epic', 'all'])
       .conflicts('epic', 'all')
       .example('$0 validate-issue', 'Interactive selection of issue to validate')
+      .example('$0 validate-issue POP-1234', 'Validate specific issue by key')
       .example('$0 validate-issue --all', 'Validate all issues in all increments')
       .example(
         '$0 validate-issue --component idp-infra',

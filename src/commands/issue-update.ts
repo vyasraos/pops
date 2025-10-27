@@ -10,8 +10,7 @@ import { SimpleMapper } from '../utils/simple-mapper';
 import type { JiraIssue } from '../types';
 
 interface IssueUpdateArgs {
-  file?: string;
-  key?: string;
+  issueKey: string;
 }
 
 interface WorkspaceIssue {
@@ -31,48 +30,16 @@ class IssueUpdater {
     this.mapper = new SimpleMapper();
   }
 
-  async run(filePath?: string, issueKey?: string): Promise<void> {
+  async run(issueKey: string): Promise<void> {
     try {
-      console.log(chalk.blue('📝 Updating Jira issue...\n'));
+      console.log(chalk.blue(`📝 Updating Jira issue: ${issueKey}...\n`));
 
-      // Get the file path
-      let targetFile: string;
-      if (filePath) {
-        targetFile = path.resolve(filePath);
-      } else if (issueKey) {
-        // Find file by issue key
-        const foundFile = await this.findFileByKey(issueKey);
-        if (!foundFile) {
-          throw new Error(`Issue ${issueKey} not found in _workspace directory`);
-        }
-        targetFile = foundFile;
-      } else {
-        // Get all issues from _workspace
-        const issues = await this.getAllWorkspaceIssues();
-
-        if (issues.length === 0) {
-          throw new Error('No issues found in _workspace directory');
-        }
-
-        const { selectedFile } = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'selectedFile',
-            message: 'Select issue to update',
-            choices: issues.map((issue) => ({
-              name: `${issue.key} - ${issue.summary} (${issue.component})`,
-              value: issue.filePath,
-              short: issue.key,
-            })),
-            pageSize: 10,
-            filter: (input: string) => {
-              // Enable search functionality
-              return input;
-            },
-          },
-        ]);
-        targetFile = selectedFile;
+      // Find file by issue key in _workspace
+      const foundFile = await this.findFileByKey(issueKey);
+      if (!foundFile) {
+        throw new Error(`Issue ${issueKey} not found in _workspace directory`);
       }
+      const targetFile = foundFile;
 
       // Read the markdown file
       const content = await fs.readFile(targetFile, 'utf8');
@@ -222,24 +189,18 @@ class IssueUpdater {
   }
 }
 
-export const issueUpdateCommand: CommandModule<Record<string, never>, IssueUpdateArgs> = {
-  command: 'update-issue [file]',
+export const issueUpdateCommand: CommandModule<{}, IssueUpdateArgs> = {
+  command: 'update-issue <issueKey>',
   describe: 'Update an existing Jira issue with dynamic field mapping support',
   builder: (yargs) => {
-    return yargs
-      .positional('file', {
-        describe: 'Path to the markdown file',
-        type: 'string',
-      })
-      .option('key', {
-        alias: 'k',
-        describe: 'Issue key (e.g., POP-1234)',
-        type: 'string',
-      })
-      .conflicts('file', 'key');
+    return yargs.positional('issueKey', {
+      describe: 'Jira issue key (e.g., POP-1234)',
+      type: 'string',
+      demandOption: true,
+    });
   },
   handler: async (argv) => {
     const updater = new IssueUpdater();
-    await updater.run(argv.file, argv.key);
+    await updater.run(argv.issueKey);
   },
 };

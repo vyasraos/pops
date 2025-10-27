@@ -7,7 +7,7 @@ import { validateCommand } from './commands/config';
 import { fetchEpicsCommand } from './commands/fetch-epics';
 import { issueCreateCommand } from './commands/issue-create';
 import { issuePromoteCommand } from './commands/issue-promote';
-import { issueRefineCommand } from './commands/issue-refine';
+import { issueReworkCommand } from './commands/issue-refine';
 import { issueUpdateCommand } from './commands/issue-update';
 import { processEpicsCommand } from './commands/process-epics';
 import { validateIssuesCommand } from './commands/validate-issues';
@@ -41,16 +41,16 @@ const cli = yargs(hideBin(process.argv))
   .command(issueCreateCommand)
   .command(issueUpdateCommand)
   .command(issuePromoteCommand)
-  .command(issueRefineCommand)
+  .command(issueReworkCommand)
   .command(validateIssuesCommand)
   .example('$0 validate', 'Validate POPS configuration and dependencies')
   .example('$0 fetch-issues', 'Fetch epics and children from Jira to _data folder')
   .example('$0 process-issue', 'Generate markdown files from _data JSON')
   .example('$0 create-issue', 'Create a new Jira issue interactively')
-  .example('$0 update-issue [file]', 'Update summary and description of an issue')
-  .example('$0 update-issue --key POP-1234', 'Update issue by key')
-  .example('$0 promote-issue [file]', 'Promote a workspace issue to an increment')
-  .example('$0 refine-issue POP-1234', 'Fetch Jira issue and create markdown file for editing')
+  .example('$0 update-issue POP-1234', 'Update issue by key')
+  .example('$0 promote-issue POP-1234', 'Promote a workspace issue to an increment')
+  .example('$0 rework-issue POP-1234', 'Rework a Jira issue by fetching it and creating a markdown file for editing')
+  .example('$0 validate-issue POP-1234', 'Validate specific issue by key')
   .example('$0 validate-issue --all', 'Validate all issues against template specifications')
   .epilogue(chalk.cyan('POPS CLI - Playbook Operations CLI for Jira integration'));
 

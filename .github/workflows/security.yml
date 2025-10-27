@@ -115,6 +115,7 @@ jobs:
       with:
         path: ./
         extra_args: --debug --only-verified
+
   sbom-generation:
     name: Generate Software Bill of Materials
     runs-on: ubuntu-latest
@@ -147,7 +148,7 @@ jobs:
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [codeql, dependency-scan, secret-scan]
+    needs: [codeql, dependency-scan, secret-scan, sbom-generation]
     if: always()
 
     steps:
@@ -172,6 +173,12 @@ jobs:
           echo "✅ **Secret Detection**: No secrets detected" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Secret Detection**: Potential secrets found" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [[ "${{ needs.sbom-generation.result }}" == "success" ]]; then
+          echo "✅ **SBOM Generation**: Software Bill of Materials generated" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **SBOM Generation**: Failed to generate SBOM" >> $GITHUB_STEP_SUMMARY
         fi
 
         echo "" >> $GITHUB_STEP_SUMMARY

@@ -63,17 +63,11 @@ detect_platform() {
             arch="arm64"
             ;;
         *)
-            print_warning "Unsupported architecture: $(uname -m). Trying x64..."
-            arch="x64"
+            print_error "Unsupported architecture: $(uname -m). Supported: x86_64, arm64"
             ;;
     esac
 
-    # For now, we only build x64 binaries
-    if [ "$arch" != "x64" ]; then
-        print_warning "Only x64 binaries are available. Proceeding with x64 binary."
-    fi
-
-    echo "${os}"
+    echo "${os}-${arch}"
 }
 
 # Get the latest release version
@@ -98,14 +92,23 @@ install_binary() {
 
     # Determine binary name based on platform
     case "$platform" in
-        macos)
-            binary_name="pops-macos"
+        macos-x64)
+            binary_name="pops-macos-x64"
             ;;
-        linux)
-            binary_name="pops-linux"
+        macos-arm64)
+            binary_name="pops-macos-arm64"
             ;;
-        windows)
-            binary_name="pops-windows.exe"
+        linux-x64)
+            binary_name="pops-linux-x64"
+            ;;
+        linux-arm64)
+            binary_name="pops-linux-arm64"
+            ;;
+        windows-x64)
+            binary_name="pops-windows-x64.exe"
+            ;;
+        *)
+            print_error "Unsupported platform: $platform"
             ;;
     esac
 

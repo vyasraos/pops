@@ -59,6 +59,10 @@ jobs:
   dependency-scan:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
 
     steps:
     - name: Checkout code
@@ -95,10 +99,6 @@ jobs:
           ./
         results-file-name: 'osv-results.sarif'
         fail-on-vuln: false
-      permissions:
-        security-events: write
-        contents: read
-        actions: read
 
   secret-scan:
     name: Secret Detection

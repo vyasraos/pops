@@ -124,7 +124,7 @@ jobs:
     - name: Test binaries
       run: |
         chmod +x dist/pops-*
-        ./dist/pops-linux --version
+        ./dist/pops-linux-x64 --version
         file dist/pops-*
 
     - name: Upload binaries as artifacts
@@ -132,9 +132,11 @@ jobs:
       with:
         name: binaries
         path: |
-          dist/pops-linux
-          dist/pops-macos
-          dist/pops-windows.exe
+          dist/pops-linux-x64
+          dist/pops-linux-arm64
+          dist/pops-macos-x64
+          dist/pops-macos-arm64
+          dist/pops-windows-x64.exe
         retention-days: 30
 
   validate-install-script:

@@ -9,4 +9,3 @@ bun = true
 
 [test]
 # Use Bun's built-in test runner
-preload = []

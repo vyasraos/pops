@@ -88,20 +88,17 @@ jobs:
         sarif_file: 'trivy-results.sarif'
 
     - name: Run OSV Scanner
-      uses: google/osv-scanner-action@v1.8.0
+      uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.2.3
       with:
         scan-args: |-
-          -r
-          --format=sarif
-          --output=osv-results.sarif
-          .
-      continue-on-error: true
-
-    - name: Upload OSV scan results
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'osv-results.sarif'
+          --recursive
+          ./
+        results-file-name: 'osv-results.sarif'
+        fail-on-vuln: false
+      permissions:
+        security-events: write
+        contents: read
+        actions: read
 
   secret-scan:
     name: Secret Detection

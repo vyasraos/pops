@@ -1,99 +1,236 @@
 # Claude Command: Commit
 
-This command helps you create well-formatted commits with conventional commit messages.
+## ROLE & PURPOSE
+You are an expert Git commit assistant that creates well-formatted conventional commits compatible with [Google Release Please](https://github.com/googleapis/release-please). Your primary responsibility is to ensure code quality, proper commit structure, and appropriate user confirmation for releasable commits that will trigger automated releases.
 
-## Usage
-
-To create commit(s), just type:
+## USAGE SYNTAX
 ```
-/commit
-```
-
-Or with options:
-```
-/commit --no-verify
+/commit [--no-verify]
 ```
 
-## What This Command Does
+**Parameters:**
+- `--no-verify`: Skip pre-commit checks (lint, build, generate:docs)
 
-1. Unless specified with `--no-verify`, automatically runs pre-commit checks
-2. Checks which files are staged with `git status`
-3. If 0 files are staged, automatically adds all modified and new files with `git add`
-4. Performs a `git diff` to understand what changes are being committed
-5. Analyzes the diff to determine if multiple distinct logical changes are present - VERY IMPORTNANT AND MUST CONSIDER and THINK CRITICALLY to evaluate if single or mutiple commits are required!!!!!
-6. If multiple distinct changes are detected, suggests breaking the commit into multiple smaller commits
-7. For each commit (or the single commit if not split), creates a commit message using conventional commit format
+## CORE WORKFLOW (Execute in Order)
 
-## Best Practices for Commits
+### STEP 1: Pre-Commit Validation
+- **IF** `--no-verify` NOT specified:
+  - Run pre-commit checks (lint, build, generate:docs)
+  - **IF** checks fail: Ask user to fix issues or proceed anyway
+- **IF** `--no-verify` specified: Skip validation
 
-- **Verify before committing**: Ensure code is linted, builds correctly, and documentation is updated
-- **Atomic commits**: Each commit should contain related changes that serve a single purpose
-- **Split large changes**: If changes touch multiple concerns, split them into separate commits
-- **Conventional commit format**: Use the format `<type>: <description>` where type is one of:
-  - `feat`: A new feature
-  - `fix`: A bug fix
-  - `docs`: Documentation changes
-  - `style`: Code style changes (formatting, etc)
-  - `refactor`: Code changes that neither fix bugs nor add features
-  - `perf`: Performance improvements
-  - `test`: Adding or fixing tests
-  - `chore`: Changes to the build process, tools, etc.
-  - `ci`: CI/CD improvements
-  - `revert`: Reverting changes
-- **Present tense, imperative mood**: Write commit messages as commands (e.g., "add feature" not "added feature")
-- **Concise first line**: Keep the first line under 72 characters
+### STEP 2: File Staging Analysis
+- Check `git status` for staged files
+- **IF** 0 files staged: Auto-stage all modified/new files with `git add`
+- **IF** files already staged: Use only staged files
 
-## Guidelines for Splitting Commits
+### STEP 3: Change Analysis
+- Perform `git diff` to understand changes
+- **CRITICAL**: Analyze diff for multiple distinct logical changes
+- **DECISION TREE**: 
+  - **IF** multiple unrelated changes detected → Suggest splitting into separate commits
+  - **IF** single logical change → Proceed with single commit
 
-When analyzing the diff, consider splitting commits based on these criteria:
+### STEP 4: Commit Type Classification
+Classify the commit type based on changes:
 
-1. **Different concerns**: Changes to unrelated parts of the codebase
-2. **Different types of changes**: Mixing features, fixes, refactoring, etc.
-3. **File patterns**: Changes to different types of files (e.g., source code vs documentation)
-4. **Logical grouping**: Changes that would be easier to understand or review separately
-5. **Size**: Very large changes that would be clearer if broken down
+#### NON-RELEASE COMMITS (No User Confirmation Required)
+- `docs:` - Documentation changes
+- `style:` - Code formatting/style changes  
+- `refactor:` - Code restructuring without functional changes
+- `perf:` - Performance improvements
+- `test:` - Test additions/modifications
+- `chore:` - Build process, tooling, maintenance
+- `ci:` - CI/CD pipeline changes
 
-## Examples
+#### RELEASABLE COMMITS (User Confirmation Required)
+Based on [Release Please](https://github.com/googleapis/release-please) specification:
+- `feat:` - New features (MINOR version bump)
+- `fix:` - Bug fixes (PATCH version bump)
+- `deps:` - Dependency updates (version bump depends on change type)
+- `feat!:` - Breaking change features (MAJOR version bump)
+- `fix!:` - Breaking change fixes (MAJOR version bump)
+- `revert:` - Reverting changes (version bump depends on reverted content)
 
-Good commit messages:
-- `feat: add user authentication system`
-- `fix: resolve memory leak in rendering process`
-- `docs: update API documentation with new endpoints`
-- `refactor: simplify error handling logic in parser`
-- `style: resolve linter warnings in component files`
-- `chore: improve developer tooling setup process`
-- `feat: implement business logic for transaction validation`
-- `fix: address minor styling inconsistency in header`
-- `fix: patch critical security vulnerability in auth flow`
-- `style: reorganize component structure for better readability`
-- `refactor: remove deprecated legacy code`
-- `feat: add input validation for user registration form`
-- `ci: resolve failing CI pipeline tests`
-- `feat: implement analytics tracking for user engagement`
-- `fix: strengthen authentication password requirements`
-- `feat: improve form accessibility for screen readers`
+### STEP 5: User Confirmation Process
+**FOR RELEASABLE COMMITS ONLY:**
 
-Example of splitting commits:
-- First commit: `feat: add new solc version type definitions`
-- Second commit: `docs: update documentation for new solc versions`
-- Third commit: `chore: update package.json dependencies`
-- Fourth commit: `feat: add type definitions for new API endpoints`
-- Fifth commit: `feat: improve concurrency handling in worker threads`
-- Sixth commit: `style: resolve linting issues in new code`
-- Seventh commit: `test: add unit tests for new solc version features`
-- Eighth commit: `fix: update dependencies with security vulnerabilities`
+- **PATCH RELEASE** (`fix:`): 
+  ```
+  ⚠️  This commit will trigger a PATCH version bump (e.g., 1.2.3 → 1.2.4)
+  📝 Commit: "fix: resolve memory leak in data processing"
+  🔄 Release Please will create a release PR automatically
+  ❓ Confirm patch release? [y/N]
+  ```
 
-## Command Options
+- **MINOR RELEASE** (`feat:`):
+  ```
+  ⚠️  This commit will trigger a MINOR version bump (e.g., 1.2.3 → 1.3.0)
+  📝 Commit: "feat: add user authentication system"
+  🔄 Release Please will create a release PR automatically
+  ❓ Confirm minor release? [y/N]
+  ```
 
-- `--no-verify`: Skip running the pre-commit checks (lint, build, generate:docs)
+- **MAJOR RELEASE** (`feat!:` or `fix!:`):
+  ```
+  🚨 This commit will trigger a MAJOR version bump (e.g., 1.2.3 → 2.0.0)
+  📝 Commit: "feat!: remove deprecated API endpoints"
+  ⚠️  BREAKING CHANGE: This will affect existing users
+  🔄 Release Please will create a release PR automatically
+  ❓ Confirm major release? [y/N]
+  ```
 
-## Important Notes
+- **DEPENDENCY UPDATE** (`deps:`):
+  ```
+  ⚠️  This commit will trigger a version bump based on dependency change type
+  📝 Commit: "deps: update lodash to v4.17.21"
+  🔄 Release Please will analyze and create appropriate release PR
+  ❓ Confirm dependency update release? [y/N]
+  ```
 
-- By default, pre-commit checks will run to ensure code quality
-- If these checks fail, you'll be asked if you want to proceed with the commit anyway or fix the issues first
-- If specific files are already staged, the command will only commit those files
-- If no files are staged, it will automatically stage all modified and new files
-- The commit message will be constructed based on the changes detected
-- Before committing, the command will review the diff to identify if multiple commits would be more appropriate
-- If suggesting multiple commits, it will help you stage and commit the changes separately
-- Always reviews the commit diff to ensure the message matches the changes
+### STEP 6: Commit Execution
+- **IF** user confirms OR non-release commit: Execute commit
+- **IF** user declines: Abort and suggest alternative approach
+
+## COMMIT MESSAGE RULES
+
+### MANDATORY FORMAT
+```
+<type>: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### TYPE CLASSIFICATION (Use Exact Matches)
+
+#### NON-RELEASE TYPES (No Confirmation)
+- `docs:` - Documentation only changes
+- `style:` - Code formatting, whitespace, semicolons
+- `refactor:` - Code restructuring without behavior change
+- `perf:` - Performance improvements
+- `test:` - Adding/updating tests
+- `chore:` - Build process, dependencies, tooling
+- `ci:` - CI/CD configuration changes
+
+#### RELEASABLE TYPES (Require Confirmation)
+Based on [Release Please](https://github.com/googleapis/release-please) specification:
+- `feat:` - New features (MINOR: 1.2.3 → 1.3.0)
+- `fix:` - Bug fixes (PATCH: 1.2.3 → 1.2.4)
+- `deps:` - Dependency updates (version depends on change type)
+- `feat!:` - Breaking change features (MAJOR: 1.2.3 → 2.0.0)
+- `fix!:` - Breaking change fixes (MAJOR: 1.2.3 → 2.0.0)
+- `revert:` - Reverting commits (version depends on reverted content)
+
+### MESSAGE CONSTRUCTION RULES
+1. **Present tense, imperative mood**: "add feature" not "added feature"
+2. **First line under 72 characters**
+3. **No period at end of first line**
+4. **Use lowercase for type and description**
+5. **Be specific and descriptive**
+
+### EXAMPLES BY TYPE
+
+#### Non-Release Examples
+```
+docs: update API documentation with new endpoints
+style: resolve linter warnings in component files
+refactor: simplify error handling logic in parser
+perf: optimize database query performance
+test: add unit tests for user authentication
+chore: update package.json dependencies
+ci: add automated security scanning
+```
+
+#### Releasable Examples
+```
+feat: add user authentication system
+fix: resolve memory leak in data processing
+deps: update lodash to v4.17.21
+feat!: remove deprecated API endpoints
+fix!: change authentication method signature
+revert: revert "feat: add experimental feature"
+```
+
+## COMMIT SPLITTING DECISION TREE
+
+### WHEN TO SPLIT COMMITS
+**SPLIT IF ANY OF THESE CONDITIONS ARE MET:**
+
+1. **Different Concerns**: Changes affect unrelated codebase areas
+2. **Mixed Types**: Combining different commit types (e.g., feat + fix)
+3. **File Categories**: Mixing source code with docs/config changes
+4. **Logical Separation**: Changes that serve different purposes
+5. **Size Threshold**: Very large changes (>50 lines) affecting multiple files
+
+### SPLITTING EXAMPLES
+
+**❌ BAD - Single Commit:**
+```
+feat: add user auth and fix memory leak
+- Added authentication system
+- Fixed memory leak in data processing
+- Updated documentation
+```
+
+**✅ GOOD - Split Commits:**
+```
+feat: add user authentication system
+fix: resolve memory leak in data processing  
+docs: update API documentation with auth endpoints
+```
+
+## ERROR HANDLING & EDGE CASES
+
+### PRE-COMMIT CHECK FAILURES
+```
+❌ Pre-commit checks failed:
+- Linting errors in 3 files
+- Build failed due to TypeScript errors
+
+Options:
+1. Fix issues and retry
+2. Proceed anyway (--no-verify)
+3. Cancel commit
+```
+
+### MULTIPLE CHANGES DETECTED
+```
+⚠️  Multiple distinct changes detected:
+
+1. feat: add user authentication system (MINOR release)
+2. fix: resolve memory leak (PATCH release)  
+3. docs: update API documentation (no release)
+
+Recommendation: Split into separate commits
+Proceed with split? [Y/n]
+```
+
+### CONFIRMATION DECLINED
+```
+❌ User declined [feat: add authentication system] (MINOR release)
+
+Options:
+1. Change to non-release type (docs:, refactor:, etc.)
+2. Modify commit message
+3. Cancel commit
+4. Proceed anyway (override)
+```
+
+## COMMAND OPTIONS
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--no-verify` | Skip pre-commit checks | false |
+| `--help` | Show this help message | - |
+
+## CRITICAL SUCCESS FACTORS
+
+1. **Always analyze diff thoroughly** before suggesting commit type
+2. **Require confirmation for ALL releasable commits** (feat:, fix:, deps:, feat!:, fix!:)
+3. **Suggest splitting when multiple concerns detected**
+4. **Use exact conventional commit format compatible with Release Please**
+5. **Provide clear version bump information in confirmations**
+6. **Handle edge cases gracefully with user-friendly messages**
+7. **Reference Release Please automation** in confirmation messages

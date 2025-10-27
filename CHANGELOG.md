@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.2.0](https://github.com/vyasraos/pops/compare/v0.1.1...v0.2.0) (2025-10-27)
+
+
+### Features
+
+* add automated release documentation ([2b1be36](https://github.com/vyasraos/pops/commit/2b1be369e65e8077f0b6132685a0b658d04df7ac))
+* improve commit command and fix workflow conflicts ([c1ef471](https://github.com/vyasraos/pops/commit/c1ef471de60dbc4eab007ea84380f9be7740ad74))
+* migrate from semantic-release to Release Please ([1c1cdd5](https://github.com/vyasraos/pops/commit/1c1cdd501e2ce4cce438fb7f8208cea0eee75450))
+* standardize issue commands to use issue key input with smart file detection ([ff3c8b8](https://github.com/vyasraos/pops/commit/ff3c8b8893333cba347e281f5aa9df23d3b939b1))
+
+
+### Bug Fixes
+
+* add release-please-config.json for compatibility ([04c949d](https://github.com/vyasraos/pops/commit/04c949d1f0bd92e80d933335119c401d89a440bb))
+* correct build binaries job condition in release workflow ([8c30db7](https://github.com/vyasraos/pops/commit/8c30db799171d360fb2dbf78eab1c9d6abd262fb))
+* correct Release Please manifest format ([cd661ef](https://github.com/vyasraos/pops/commit/cd661ef06a1440e5a22b703f5b8ef89413224fc2))
+* correct Release Please workflow configuration ([d2d5c66](https://github.com/vyasraos/pops/commit/d2d5c669b3fc7be5f699788e0e3cf7d48a38a43e))
+* remove invalid package-name parameter from Release Please ([b1e8397](https://github.com/vyasraos/pops/commit/b1e839743363c15c8fa1e968db93db8007335348))
+* separate release binary building into dedicated workflow ([5f0b2ec](https://github.com/vyasraos/pops/commit/5f0b2ecd390b69816ba5714fa4da557413436d2e))
+* simplify Release Please to standard configuration ([4c58c0e](https://github.com/vyasraos/pops/commit/4c58c0ed6c54b65ce7e3fe8bde16c37f84c98ece))
+* simplify Release Please workflow configuration ([7f31474](https://github.com/vyasraos/pops/commit/7f314744383c4721e21ef2cb9df915016cc1dc04))
+* update Release Please workflow configuration ([2bf5dbc](https://github.com/vyasraos/pops/commit/2bf5dbc6556ad492abb1295c76c07bdd879413ff))
+
 ## [Unreleased]
 
 ### Added

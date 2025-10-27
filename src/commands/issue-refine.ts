@@ -1,11 +1,11 @@
-import { CommandModule } from 'yargs';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import chalk from 'chalk';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as yaml from 'js-yaml';
+import type { CommandModule } from 'yargs';
 import { JiraApiClient } from '../services/jira-api-client';
-import { POPSConfig } from '../utils/pops-config';
 import { logger } from '../utils/logger';
+import { POPSConfig } from '../utils/pops-config';
 
 interface IssueRefineArgs {
   issueKey: string;
@@ -28,7 +28,6 @@ interface JiraIssue {
 
 class IssueRefiner {
   private jiraClient: JiraApiClient;
-  private popsConfig: POPSConfig;
 
   constructor() {
     this.jiraClient = new JiraApiClient();
@@ -42,7 +41,7 @@ class IssueRefiner {
       // Fetch issue from Jira
       console.log(chalk.blue('📥 Fetching issue from Jira...'));
       const jiraIssue = await this.jiraClient.getIssue(issueKey);
-      
+
       if (!jiraIssue) {
         throw new Error(`Issue ${issueKey} not found in Jira`);
       }
@@ -55,7 +54,7 @@ class IssueRefiner {
 
       // Determine target directory based on issue type and components
       const targetDir = await this.determineTargetDirectory(jiraIssue);
-      
+
       // Create markdown file
       console.log(chalk.blue('📝 Creating markdown file...'));
       const markdownContent = this.generateMarkdownContent(jiraIssue);
@@ -68,14 +67,13 @@ class IssueRefiner {
       // Write markdown file
       await fs.writeFile(filePath, markdownContent, 'utf8');
 
-      console.log(chalk.green(`\n✅ Issue refined successfully!`));
+      console.log(chalk.green('\n✅ Issue refined successfully!'));
       console.log(chalk.green(`   Key: ${issueKey}`));
       console.log(chalk.green(`   File: ${path.relative(process.cwd(), filePath)}`));
-      console.log(chalk.blue(`\n📋 Next steps:`));
-      console.log(chalk.blue(`   1. Edit the markdown file to refine the content`));
+      console.log(chalk.blue('\n📋 Next steps:'));
+      console.log(chalk.blue('   1. Edit the markdown file to refine the content'));
       console.log(chalk.blue(`   2. Run: pops update-issue ${filePath}`));
       console.log(chalk.blue(`   3. Run: pops promote-issue ${filePath} --target FY26Q1`));
-
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(chalk.red(`❌ Failed to refine issue: ${errorMessage}`));
@@ -86,28 +84,28 @@ class IssueRefiner {
 
   private async addReWorkspaceLabel(issueKey: string, jiraIssue: JiraIssue): Promise<void> {
     const currentLabels = jiraIssue.fields.labels || [];
-    
+
     // Add re-workspace label if not already present
     if (!currentLabels.includes('re-workspace')) {
       const newLabels = [...currentLabels, 're-workspace'];
-      
+
       const payload = {
         fields: {
-          labels: newLabels
-        }
+          labels: newLabels,
+        },
       };
 
       await this.jiraClient.updateIssue(issueKey, payload);
-      console.log(chalk.green(`✅ Added re-workspace label`));
+      console.log(chalk.green('✅ Added re-workspace label'));
     } else {
-      console.log(chalk.yellow(`⚠️  re-workspace label already present`));
+      console.log(chalk.yellow('⚠️  re-workspace label already present'));
     }
   }
 
   private async determineTargetDirectory(jiraIssue: JiraIssue): Promise<string> {
     const issueType = jiraIssue.fields.issuetype.name.toLowerCase();
     const component = jiraIssue.fields.components?.[0]?.name || 'unknown';
-    
+
     // Determine base directory based on component
     let baseDir: string;
     if (component === 'idp-infra') {
@@ -141,30 +139,30 @@ class IssueRefiner {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
-    
+
     return `epic-${cleanSummary}`;
   }
 
   private async findEpicDirectory(baseDir: string): Promise<string | null> {
     try {
       const entries = await fs.readdir(baseDir, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         if (entry.isDirectory() && entry.name.startsWith('epic-')) {
           return entry.name;
         }
       }
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       // Directory doesn't exist or can't be read
     }
-    
+
     return null;
   }
 
   private generateFileName(jiraIssue: JiraIssue): string {
     const issueType = jiraIssue.fields.issuetype.name.toLowerCase();
     const key = jiraIssue.key;
-    
+
     return `${issueType}-${key}.md`;
   }
 
@@ -172,7 +170,7 @@ class IssueRefiner {
     const issueType = jiraIssue.fields.issuetype.name;
     const workstream = jiraIssue.fields.customfield_12401?.value || 'IaC';
     const initiative = jiraIssue.fields.customfield_12400?.value || 'Private Cloud 2.0';
-    const components = jiraIssue.fields.components?.map(c => c.name) || ['idp-infra'];
+    const components = jiraIssue.fields.components?.map((c) => c.name) || ['idp-infra'];
     const labels = [...(jiraIssue.fields.labels || []), 'workspace'];
     const points = jiraIssue.fields.customfield_10006 || null;
 
@@ -185,7 +183,7 @@ class IssueRefiner {
         components: components,
         labels: labels,
         status: jiraIssue.fields.status.name,
-        points: points
+        points: points,
       },
       mapping: {
         key: 'api.key',
@@ -195,12 +193,12 @@ class IssueRefiner {
         components: 'api.fields.components[].name',
         labels: 'api.fields.labels[]',
         status: 'api.fields.status.name',
-        points: 'api.fields.customfield_10006'
-      }
+        points: 'api.fields.customfield_10006',
+      },
     };
 
     const description = jiraIssue.fields.description || 'No description available.';
-    
+
     return `---
 ${yaml.dump(frontmatter, { lineWidth: -1, noRefs: true })}
 ---
@@ -223,11 +221,11 @@ export const issueRefineCommand: CommandModule<{}, IssueRefineArgs> = {
     return yargs.positional('issueKey', {
       describe: 'Jira issue key (e.g., POP-1234)',
       type: 'string',
-      demandOption: true
+      demandOption: true,
     });
   },
   handler: async (argv) => {
     const refiner = new IssueRefiner();
     await refiner.run(argv.issueKey);
-  }
+  },
 };

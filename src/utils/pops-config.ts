@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as TOML from 'smol-toml';
 
 export interface SectionConfig {
@@ -61,9 +61,9 @@ export class POPSConfig {
         path.join(process.cwd(), '..', '..', 'pops.toml'),
         path.join(process.cwd(), '..', '..', '..', 'pops.toml'),
         path.join(process.cwd(), '..', '..', '..', '..', 'pops.toml'),
-        path.join(process.cwd(), '..', '..', '..', '..', '..', 'pops.toml')
+        path.join(process.cwd(), '..', '..', '..', '..', '..', 'pops.toml'),
       ];
-      
+
       let foundPath: string | undefined;
       for (const possiblePath of possiblePaths) {
         if (fs.existsSync(possiblePath)) {
@@ -71,7 +71,7 @@ export class POPSConfig {
           break;
         }
       }
-      
+
       this.configPath = foundPath || 'pops.toml'; // fallback
     }
     // Don't load config in constructor - load lazily
@@ -85,14 +85,14 @@ export class POPSConfig {
     if (this.configLoaded) {
       return;
     }
-    
+
     try {
       if (!fs.existsSync(this.configPath)) {
         throw new Error(`Config file does not exist: ${this.configPath}`);
       }
       const configContent = fs.readFileSync(this.configPath, 'utf-8');
       this.config = TOML.parse(configContent);
-      
+
       // Resolve relative paths relative to config file directory
       const configDir = path.dirname(this.configPath);
       if (this.config.jira?.paths) {
@@ -107,10 +107,12 @@ export class POPSConfig {
           paths.templates = path.resolve(configDir, paths.templates);
         }
       }
-      
+
       this.configLoaded = true;
     } catch (error) {
-      throw new Error(`Failed to load config from ${this.configPath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to load config from ${this.configPath}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -123,7 +125,7 @@ export class POPSConfig {
       throw new Error(`Template type '${templateType}' not found in config`);
     }
 
-    const basePath = templates.base_path || 'templates';
+    const _basePath = templates.base_path || 'templates';
     const planningPath = planning.path || 'templates/planning';
 
     return path.join(planningPath, types[templateType]);
@@ -146,7 +148,7 @@ export class POPSConfig {
     // Extract JIRA mappings from fields in sections
     const jiraMappings: Record<string, any> = {};
     const requiredSections = typeRules.required_sections || [];
-    
+
     for (const section of requiredSections) {
       if (section.fields) {
         for (const field of section.fields) {
@@ -154,7 +156,7 @@ export class POPSConfig {
             jira_field: field.jira_field,
             required: field.required,
             cli_input: field.cli_input,
-            default: field.default
+            default: field.default,
           };
         }
       }
@@ -170,7 +172,7 @@ export class POPSConfig {
     const validation = this.config.validation || {};
 
     // Use template-specific validation if provided
-    const rules = templateType ? (validation[templateType] || {}) : {};
+    const rules = templateType ? validation[templateType] || {} : {};
 
     const requiredSections = rules.required_sections || [];
     const cliSections: SectionConfig[] = [];
@@ -198,7 +200,7 @@ export class POPSConfig {
     const validation = this.config.validation || {};
 
     // Use template-specific validation if provided
-    const rules = templateType ? (validation[templateType] || {}) : {};
+    const rules = templateType ? validation[templateType] || {} : {};
 
     const requiredSections = rules.required_sections || [];
     const cliFields: FieldConfig[] = [];

@@ -5,7 +5,7 @@ export const POPSConfigSchema = z.object({
   cli: z.object({
     name: z.string().min(1, 'CLI name is required'),
     version: z.string().min(1, 'CLI version is required'),
-    description: z.string().optional()
+    description: z.string().optional(),
   }),
 
   jira: z.object({
@@ -15,11 +15,11 @@ export const POPSConfigSchema = z.object({
       master: z.string().min(1, 'Master path is required'),
       increments: z.string().min(1, 'Increments path is required'),
       templates: z.string().min(1, 'Templates path is required'),
-      target: z.string().min(1, 'Target increment is required')
+      target: z.string().min(1, 'Target increment is required'),
     }),
     create_directories: z.boolean().default(true),
-    overwrite_existing: z.boolean().default(false)
-  })
+    overwrite_existing: z.boolean().default(false),
+  }),
 
   // Removed deprecated sections: templates, output, validation
 });
@@ -31,25 +31,33 @@ export const MasterComponentsSchema = z.object({
   project: z.object({
     key: z.string(),
     name: z.string(),
-    id: z.string()
+    id: z.string(),
   }),
-  components: z.array(z.object({
-    name: z.string(),
-    jira_id: z.string()
-  })),
-  issue_types: z.array(z.object({
-    issue_type: z.string(),
-    jira_id: z.string()
-  })),
+  components: z.array(
+    z.object({
+      name: z.string(),
+      jira_id: z.string(),
+    })
+  ),
+  issue_types: z.array(
+    z.object({
+      issue_type: z.string(),
+      jira_id: z.string(),
+    })
+  ),
   metadata: z.object({
     lastUpdated: z.string(),
-    version: z.string()
-  })
+    version: z.string(),
+  }),
 });
 
 export type MasterComponentsType = z.infer<typeof MasterComponentsSchema>;
 
-export function validatePOPSConfig(config: unknown): { success: boolean; data?: POPSConfigType; errors?: string[] } {
+export function validatePOPSConfig(config: unknown): {
+  success: boolean;
+  data?: POPSConfigType;
+  errors?: string[];
+} {
   try {
     const validatedConfig = POPSConfigSchema.parse(config);
     return { success: true, data: validatedConfig };
@@ -65,7 +73,11 @@ export function validatePOPSConfig(config: unknown): { success: boolean; data?: 
   }
 }
 
-export function validateMasterComponents(config: unknown): { success: boolean; data?: MasterComponentsType; errors?: string[] } {
+export function validateMasterComponents(config: unknown): {
+  success: boolean;
+  data?: MasterComponentsType;
+  errors?: string[];
+} {
   try {
     const validatedConfig = MasterComponentsSchema.parse(config);
     return { success: true, data: validatedConfig };

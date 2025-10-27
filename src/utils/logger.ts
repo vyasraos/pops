@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { LogLevel } from '../types';
+import type { LogLevel } from '../types';
 
 class Logger {
   private logLevel: LogLevel = 'info';

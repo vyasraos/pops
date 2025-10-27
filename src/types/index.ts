@@ -1,4 +1,3 @@
-
 export interface JiraProject {
   id: string;
   key: string;
@@ -29,7 +28,6 @@ export interface JiraComponent {
   realAssigneeType?: string;
   isAssigneeTypeValid?: boolean;
 }
-
 
 // Component YAML file structure (simplified for components.yaml)
 export interface ComponentsFile {
@@ -80,9 +78,6 @@ export interface MasterFile {
   };
 }
 
-
-
-
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 // New interfaces for data-driven approach
@@ -95,7 +90,6 @@ export interface IssueRawData {
   changelog?: any;
   self?: string;
 }
-
 
 export interface ProcessingResult {
   success: boolean;

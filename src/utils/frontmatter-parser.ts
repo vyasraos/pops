@@ -1,6 +1,6 @@
-import * as fs from 'fs';
+import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
 import * as yaml from 'js-yaml';
-import * as crypto from 'crypto';
 
 export interface SyncMetadata {
   issueKey: string | null;
@@ -18,10 +18,10 @@ export interface StandardFields {
 }
 
 export interface CustomFields {
-  customfield_12401?: string;  // Workstream
-  customfield_12400?: string;  // Virtualization Initiative
-  customfield_10006?: number;  // Story Points
-  customfield_10000?: string | null;  // Parent
+  customfield_12401?: string; // Workstream
+  customfield_12400?: string; // Virtualization Initiative
+  customfield_10006?: number; // Story Points
+  customfield_10000?: string | null; // Parent
 }
 
 export interface FrontmatterData {
@@ -44,7 +44,7 @@ export class FrontmatterParser {
    */
   static parseFile(filePath: string): ParsedMarkdown {
     const rawContent = fs.readFileSync(filePath, 'utf-8');
-    return this.parseContent(rawContent);
+    return FrontmatterParser.parseContent(rawContent);
   }
 
   /**
@@ -52,20 +52,20 @@ export class FrontmatterParser {
    */
   static parseContent(content: string): ParsedMarkdown {
     const lines = content.split('\n');
-    
-    if (lines.length < 2 || lines[0] !== this.FRONTMATTER_DELIMITER) {
+
+    if (lines.length < 2 || lines[0] !== FrontmatterParser.FRONTMATTER_DELIMITER) {
       // File doesn't have frontmatter, create default
-      const defaultFrontmatter = this.createFromTemplate('Epic');
+      const defaultFrontmatter = FrontmatterParser.createFromTemplate('Epic');
       return {
         frontmatter: defaultFrontmatter,
         content: content,
-        rawContent: content
+        rawContent: content,
       };
     }
 
     let frontmatterEndIndex = -1;
     for (let i = 1; i < lines.length; i++) {
-      if (lines[i] === this.FRONTMATTER_DELIMITER) {
+      if (lines[i] === FrontmatterParser.FRONTMATTER_DELIMITER) {
         frontmatterEndIndex = i;
         break;
       }
@@ -77,16 +77,16 @@ export class FrontmatterParser {
 
     const frontmatterLines = lines.slice(1, frontmatterEndIndex);
     const contentLines = lines.slice(frontmatterEndIndex + 1);
-    
+
     const frontmatterYaml = frontmatterLines.join('\n');
     const markdownContent = contentLines.join('\n');
 
     const frontmatter = yaml.load(frontmatterYaml) as any;
-    
+
     return {
-      frontmatter: this.normalizeFrontmatter(frontmatter),
+      frontmatter: FrontmatterParser.normalizeFrontmatter(frontmatter),
       content: markdownContent,
-      rawContent: content
+      rawContent: content,
     };
   }
 
@@ -100,20 +100,20 @@ export class FrontmatterParser {
         type: data.standard?.type || 'Epic',
         components: data.standard?.components || [],
         labels: data.standard?.labels || [],
-        status: data.standard?.status || null
+        status: data.standard?.status || null,
       },
       custom: {
         customfield_12401: data.custom?.customfield_12401 || 'IaC',
         customfield_12400: data.custom?.customfield_12400 || 'Private Cloud 2.0',
         customfield_10006: data.custom?.customfield_10006 || 0,
-        customfield_10000: data.custom?.customfield_10000 || null
+        customfield_10000: data.custom?.customfield_10000 || null,
       },
       sync: {
         issueKey: data.sync?.issueKey || null,
         lastSync: data.sync?.lastSync || null,
         localHash: data.sync?.localHash || null,
-        remoteHash: data.sync?.remoteHash || null
-      }
+        remoteHash: data.sync?.remoteHash || null,
+      },
     };
   }
 
@@ -124,15 +124,15 @@ export class FrontmatterParser {
     const frontmatterYaml = yaml.dump(parsed.frontmatter, {
       indent: 2,
       lineWidth: -1,
-      noRefs: true
+      noRefs: true,
     });
 
     return [
-      this.FRONTMATTER_DELIMITER,
+      FrontmatterParser.FRONTMATTER_DELIMITER,
       frontmatterYaml.trim(),
-      this.FRONTMATTER_DELIMITER,
+      FrontmatterParser.FRONTMATTER_DELIMITER,
       '',
-      parsed.content
+      parsed.content,
     ].join('\n');
   }
 
@@ -140,16 +140,16 @@ export class FrontmatterParser {
    * Calculate hash of content (excluding frontmatter sync metadata)
    */
   static calculateContentHash(content: string): string {
-    const parsed = this.parseContent(content);
-    
+    const parsed = FrontmatterParser.parseContent(content);
+
     // Create content without sync metadata for hashing
     const contentForHash = {
       ...parsed.frontmatter,
       sync: {
         ...parsed.frontmatter.sync,
         localHash: null,
-        remoteHash: null
-      }
+        remoteHash: null,
+      },
     };
 
     const contentString = JSON.stringify(contentForHash) + parsed.content;
@@ -159,60 +159,51 @@ export class FrontmatterParser {
   /**
    * Update sync metadata in frontmatter
    */
-  static updateSyncMetadata(
-    content: string, 
-    updates: Partial<SyncMetadata>
-  ): string {
-    const parsed = this.parseContent(content);
-    
+  static updateSyncMetadata(content: string, updates: Partial<SyncMetadata>): string {
+    const parsed = FrontmatterParser.parseContent(content);
+
     parsed.frontmatter.sync = {
       ...parsed.frontmatter.sync,
-      ...updates
+      ...updates,
     };
 
-    return this.serialize(parsed);
+    return FrontmatterParser.serialize(parsed);
   }
 
   /**
    * Update standard fields in frontmatter
    */
-  static updateStandardFields(
-    content: string,
-    updates: Partial<StandardFields>
-  ): string {
-    const parsed = this.parseContent(content);
-    
+  static updateStandardFields(content: string, updates: Partial<StandardFields>): string {
+    const parsed = FrontmatterParser.parseContent(content);
+
     parsed.frontmatter.standard = {
       ...parsed.frontmatter.standard,
-      ...updates
+      ...updates,
     };
 
-    return this.serialize(parsed);
+    return FrontmatterParser.serialize(parsed);
   }
 
   /**
    * Update custom fields in frontmatter
    */
-  static updateCustomFields(
-    content: string,
-    updates: Partial<CustomFields>
-  ): string {
-    const parsed = this.parseContent(content);
-    
+  static updateCustomFields(content: string, updates: Partial<CustomFields>): string {
+    const parsed = FrontmatterParser.parseContent(content);
+
     parsed.frontmatter.custom = {
       ...parsed.frontmatter.custom,
-      ...updates
+      ...updates,
     };
 
-    return this.serialize(parsed);
+    return FrontmatterParser.serialize(parsed);
   }
 
   /**
    * Set parent relationship for stories/tasks
    */
   static setParent(content: string, parentIssueKey: string): string {
-    return this.updateCustomFields(content, {
-      customfield_10000: parentIssueKey
+    return FrontmatterParser.updateCustomFields(content, {
+      customfield_10000: parentIssueKey,
     });
   }
 
@@ -220,8 +211,8 @@ export class FrontmatterParser {
    * Set component for epic
    */
   static setComponent(content: string, componentName: string): string {
-    return this.updateStandardFields(content, {
-      components: [componentName]
+    return FrontmatterParser.updateStandardFields(content, {
+      components: [componentName],
     });
   }
 
@@ -229,7 +220,7 @@ export class FrontmatterParser {
    * Check if file has been synced to Jira
    */
   static isSynced(content: string): boolean {
-    const parsed = this.parseContent(content);
+    const parsed = FrontmatterParser.parseContent(content);
     return parsed.frontmatter.sync.issueKey !== null;
   }
 
@@ -237,7 +228,7 @@ export class FrontmatterParser {
    * Get issue key from frontmatter
    */
   static getIssueKey(content: string): string | null {
-    const parsed = this.parseContent(content);
+    const parsed = FrontmatterParser.parseContent(content);
     return parsed.frontmatter.sync.issueKey;
   }
 
@@ -245,7 +236,7 @@ export class FrontmatterParser {
    * Get last sync timestamp
    */
   static getLastSync(content: string): string | null {
-    const parsed = this.parseContent(content);
+    const parsed = FrontmatterParser.parseContent(content);
     return parsed.frontmatter.sync.lastSync;
   }
 
@@ -253,7 +244,7 @@ export class FrontmatterParser {
    * Get local hash
    */
   static getLocalHash(content: string): string | null {
-    const parsed = this.parseContent(content);
+    const parsed = FrontmatterParser.parseContent(content);
     return parsed.frontmatter.sync.localHash;
   }
 
@@ -261,7 +252,7 @@ export class FrontmatterParser {
    * Get remote hash
    */
   static getRemoteHash(content: string): string | null {
-    const parsed = this.parseContent(content);
+    const parsed = FrontmatterParser.parseContent(content);
     return parsed.frontmatter.sync.remoteHash;
   }
 
@@ -279,20 +270,20 @@ export class FrontmatterParser {
         type,
         components: componentName ? [componentName] : [],
         labels: [],
-        status: null
+        status: null,
       },
       custom: {
         customfield_12401: 'IaC',
         customfield_12400: 'Private Cloud 2.0',
         customfield_10006: 0,
-        customfield_10000: parentIssueKey || null
+        customfield_10000: parentIssueKey || null,
       },
       sync: {
         issueKey: null,
         lastSync: null,
         localHash: null,
-        remoteHash: null
-      }
+        remoteHash: null,
+      },
     };
 
     return frontmatter;

@@ -1,12 +1,12 @@
-import { CommandModule } from 'yargs';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as yaml from 'js-yaml';
+import type { CommandModule } from 'yargs';
 import { JiraApiClient } from '../services/jira-api-client';
-import { SimpleMapper } from '../utils/simple-mapper';
 import { logger } from '../utils/logger';
+import { SimpleMapper } from '../utils/simple-mapper';
 
 interface IssueUpdateArgs {
   file?: string;
@@ -48,7 +48,7 @@ class IssueUpdater {
       } else {
         // Get all issues from _workspace
         const issues = await this.getAllWorkspaceIssues();
-        
+
         if (issues.length === 0) {
           throw new Error('No issues found in _workspace directory');
         }
@@ -58,17 +58,17 @@ class IssueUpdater {
             type: 'list',
             name: 'selectedFile',
             message: 'Select issue to update',
-            choices: issues.map(issue => ({
+            choices: issues.map((issue) => ({
               name: `${issue.key} - ${issue.summary} (${issue.component})`,
               value: issue.filePath,
-              short: issue.key
+              short: issue.key,
             })),
             pageSize: 10,
             filter: (input: string) => {
               // Enable search functionality
               return input;
-            }
-          }
+            },
+          },
         ]);
         targetFile = selectedFile;
       }
@@ -87,48 +87,55 @@ class IssueUpdater {
       console.log(chalk.blue('\n🚀 Updating issue in Jira...'));
       let jiraFields: any = {
         summary: summary.trim(),
-        description: description.trim()
+        description: description.trim(),
       };
 
       // Apply mapping if it exists
       if (frontmatter.mapping && frontmatter.properties) {
         console.log(chalk.blue('📋 Applying field mappings...'));
-        
+
         const mappedFields = this.mapper.mapPropertiesToJira(
-          frontmatter.properties, 
+          frontmatter.properties,
           frontmatter.mapping
         );
-        
+
         const additionalFields = this.mapper.convertToJiraFields(mappedFields);
-        
+
         // Merge with existing fields (additionalFields is already the fields object)
         jiraFields = { ...jiraFields, ...additionalFields };
-        
+
         console.log(chalk.green(`✅ Mapped ${Object.keys(mappedFields).length} fields`));
       }
 
       const payload = { fields: jiraFields };
       await this.jiraClient.updateIssue(key, payload);
 
-      console.log(chalk.green(`\n✅ Issue updated successfully!`));
+      console.log(chalk.green('\n✅ Issue updated successfully!'));
       console.log(chalk.green(`   Key: ${key}`));
       console.log(chalk.green(`   File: ${path.relative(process.cwd(), targetFile)}`));
-
     } catch (error) {
       logger.error('Failed to update issue:', error);
-      console.log(chalk.red(`\n❌ Failed to update issue: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.red(
+          `\n❌ Failed to update issue: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
       process.exit(1);
     }
   }
 
-  private parseMarkdown(content: string): { frontmatter: any; summary: string; description: string } {
+  private parseMarkdown(content: string): {
+    frontmatter: any;
+    summary: string;
+    description: string;
+  } {
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
     if (!frontmatterMatch) {
       throw new Error('No frontmatter found in markdown file');
     }
 
     const frontmatter = yaml.load(frontmatterMatch[1]) as any;
-    
+
     // Extract summary and description
     const summaryMatch = content.match(/## Summary\n\n(.*?)(?=\n\n##|$)/s);
     const descriptionMatch = content.match(/## Description\n\n([\s\S]*?)$/);
@@ -138,7 +145,6 @@ class IssueUpdater {
 
     return { frontmatter, summary, description };
   }
-
 
   private async getAllWorkspaceIssues(): Promise<WorkspaceIssue[]> {
     const issues: WorkspaceIssue[] = [];
@@ -178,7 +184,7 @@ class IssueUpdater {
                   summary: this.extractSummaryFromContent(content),
                   component: component,
                   filePath: fullPath,
-                  type: frontmatter.properties.type || 'Unknown'
+                  type: frontmatter.properties.type || 'Unknown',
                 });
               }
             } catch (error) {
@@ -210,7 +216,7 @@ class IssueUpdater {
 
   private async findFileByKey(issueKey: string): Promise<string | null> {
     const issues = await this.getAllWorkspaceIssues();
-    const issue = issues.find(i => i.key === issueKey);
+    const issue = issues.find((i) => i.key === issueKey);
     return issue ? issue.filePath : null;
   }
 }
@@ -222,18 +228,17 @@ export const issueUpdateCommand: CommandModule<{}, IssueUpdateArgs> = {
     return yargs
       .positional('file', {
         describe: 'Path to the markdown file',
-        type: 'string'
+        type: 'string',
       })
       .option('key', {
         alias: 'k',
         describe: 'Issue key (e.g., POP-1234)',
-        type: 'string'
+        type: 'string',
       })
       .conflicts('file', 'key');
   },
   handler: async (argv) => {
     const updater = new IssueUpdater();
     await updater.run(argv.file, argv.key);
-  }
+  },
 };
-

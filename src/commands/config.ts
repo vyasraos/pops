@@ -1,10 +1,10 @@
-import { CommandModule } from 'yargs';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import chalk from 'chalk';
-import * as fs from 'fs';
-import * as path from 'path';
+import type { CommandModule } from 'yargs';
+import { logger } from '../utils/logger';
 import { POPSConfig } from '../utils/pops-config';
 import { validatePOPSConfig } from '../utils/pops-schema';
-import { logger } from '../utils/logger';
 
 interface ConfigValidateArgs {
   configPath?: string;
@@ -37,15 +37,16 @@ class ConfigValidator {
 
       // 4. Validate paths and directories
       await this.validatePaths();
-
     } catch (error) {
-      this.addError(`Critical validation error: ${error instanceof Error ? error.message : String(error)}`);
+      this.addError(
+        `Critical validation error: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
     return {
       isValid: this.errors.length === 0,
       errors: this.errors,
-      warnings: this.warnings
+      warnings: this.warnings,
     };
   }
 
@@ -74,9 +75,10 @@ class ConfigValidator {
       } else {
         console.log(chalk.green('✅ Configuration schema validation passed'));
       }
-
     } catch (error) {
-      this.addError(`Failed to parse TOML configuration: ${error instanceof Error ? error.message : String(error)}`);
+      this.addError(
+        `Failed to parse TOML configuration: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -178,7 +180,7 @@ class ConfigValidator {
     const pathsToCheck = [
       { name: 'Master', path: paths.master },
       { name: 'Increments', path: paths.increments },
-      { name: 'Templates', path: paths.templates }
+      { name: 'Templates', path: paths.templates },
     ];
 
     for (const { name, path: dirPath } of pathsToCheck) {
@@ -187,7 +189,7 @@ class ConfigValidator {
           try {
             fs.mkdirSync(dirPath, { recursive: true });
             console.log(chalk.green(`  ✅ ${name} directory created: ${dirPath}`));
-          } catch (error) {
+          } catch (_error) {
             this.addError(`Failed to create ${name.toLowerCase()} directory: ${dirPath}`);
           }
         } else {
@@ -201,7 +203,9 @@ class ConfigValidator {
     // Check master file exists
     const masterFile = paths.master;
     if (!fs.existsSync(masterFile)) {
-      this.addWarning(`Master components file not found: ${masterFile} (run 'pops setup' to create it)`);
+      this.addWarning(
+        `Master components file not found: ${masterFile} (run 'pops setup' to create it)`
+      );
     } else {
       console.log(chalk.green(`  ✅ Master components file exists: ${masterFile}`));
     }
@@ -225,7 +229,7 @@ export const validateCommand: CommandModule<{}, ConfigValidateArgs> = {
         alias: 'c',
         type: 'string',
         description: 'Path to POPS configuration file',
-        default: 'pops.toml'
+        default: 'pops.toml',
       })
       .example('$0 validate', 'Validate pops.toml configuration')
       .example('$0 validate -c my-config.toml', 'Validate custom configuration file');
@@ -235,7 +239,7 @@ export const validateCommand: CommandModule<{}, ConfigValidateArgs> = {
       const validator = new ConfigValidator(args.configPath);
       const result = await validator.validate();
 
-      console.log('\n' + '='.repeat(60));
+      console.log(`\n${'='.repeat(60)}`);
       console.log(chalk.bold('📊 VALIDATION RESULTS'));
       console.log('='.repeat(60));
 
@@ -265,11 +269,14 @@ export const validateCommand: CommandModule<{}, ConfigValidateArgs> = {
         console.log(chalk.red('   Please fix the errors above before proceeding.'));
         process.exit(1);
       }
-
     } catch (error) {
       logger.error('Failed to validate configuration', error);
-      console.log(chalk.red(`\n❌ Validation failed: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.red(
+          `\n❌ Validation failed: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
       process.exit(1);
     }
-  }
+  },
 };

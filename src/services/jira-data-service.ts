@@ -1,9 +1,9 @@
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { JiraApiClient } from './jira-api-client';
-import { POPSConfig } from '../utils/pops-config';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import type { FetchResult, IssueRawData } from '../types';
 import { logger } from '../utils/logger';
-import { FetchResult, IssueRawData } from '../types';
+import { POPSConfig } from '../utils/pops-config';
+import { JiraApiClient } from './jira-api-client';
 
 export class JiraDataService {
   private jiraClient: JiraApiClient;
@@ -49,7 +49,7 @@ export class JiraDataService {
         fields: issue.fields,
         expand: issue.expand,
         id: issue.id,
-        self: issue.self
+        self: issue.self,
       };
 
       const fileName = `${issueKey}.json`;
@@ -69,7 +69,7 @@ export class JiraDataService {
       component: componentName,
       epicsFetched: 0,
       totalIssuesFetched: 0,
-      errors: []
+      errors: [],
     };
 
     try {
@@ -93,7 +93,7 @@ export class JiraDataService {
         try {
           const epicKey = epic.key;
           const epicName = this.generateEpicFolderName(epic);
-          
+
           logger.info(`Processing epic: ${epicKey} (${epicName})`);
 
           // Create epic directory
@@ -108,19 +108,18 @@ export class JiraDataService {
 
           // Get and save children (stories and tasks)
           const children = await this.jiraClient.getIssueChildren(epicKey);
-          
+
           for (const child of children) {
             const childKey = child.key;
             const childType = child.fields.issuetype.name.toLowerCase();
             const childFileName = `${childType}-${childKey}.json`;
             const childFilePath = path.join(epicDataPath, childFileName);
-            
+
             await this.saveIssueData(child, childFilePath);
             result.totalIssuesFetched++;
           }
 
           logger.info(`Completed epic ${epicKey}: ${children.length} children processed`);
-
         } catch (error) {
           const errorMsg = `Failed to process epic ${epic.key}: ${error instanceof Error ? error.message : String(error)}`;
           logger.error(errorMsg);
@@ -128,8 +127,9 @@ export class JiraDataService {
         }
       }
 
-      logger.info(`Completed fetching for component ${componentName}: ${result.epicsFetched} epics, ${result.totalIssuesFetched} total issues`);
-      
+      logger.info(
+        `Completed fetching for component ${componentName}: ${result.epicsFetched} epics, ${result.totalIssuesFetched} total issues`
+      );
     } catch (error) {
       const errorMsg = `Failed to fetch epics for component ${componentName}: ${error instanceof Error ? error.message : String(error)}`;
       logger.error(errorMsg);
@@ -143,7 +143,7 @@ export class JiraDataService {
   private generateEpicFolderName(epic: any): string {
     // Extract epic name from summary or custom field
     let epicName = epic.fields.summary || epic.key;
-    
+
     // Clean up the name for folder use
     epicName = epicName
       .toLowerCase()
@@ -161,7 +161,9 @@ export class JiraDataService {
       await fs.writeFile(filePath, jsonContent, 'utf8');
       logger.debug(`Saved issue data to: ${filePath}`);
     } catch (error) {
-      throw new Error(`Failed to save issue data to ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to save issue data to ${filePath}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -169,7 +171,9 @@ export class JiraDataService {
     try {
       await fs.mkdir(path, { recursive: true });
     } catch (error) {
-      throw new Error(`Failed to create directory ${path}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to create directory ${path}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -207,7 +211,9 @@ export class JiraDataService {
               const issueData = JSON.parse(content);
               issues.push(issueData);
             } catch (error) {
-              logger.warn(`Failed to read JSON file ${file}: ${error instanceof Error ? error.message : String(error)}`);
+              logger.warn(
+                `Failed to read JSON file ${file}: ${error instanceof Error ? error.message : String(error)}`
+              );
             }
           }
 
@@ -220,12 +226,12 @@ export class JiraDataService {
           structure.set(componentName, componentMap);
         }
       }
-
     } catch (error) {
-      logger.error(`Failed to read data structure: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(
+        `Failed to read data structure: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
     return structure;
   }
-
 }

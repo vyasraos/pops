@@ -1,9 +1,9 @@
-import { CommandModule } from 'yargs';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as yaml from 'js-yaml';
+import type { CommandModule } from 'yargs';
 import { logger } from '../utils/logger';
 
 interface ValidateIssuesArgs {
@@ -30,8 +30,6 @@ interface IssueContent {
 }
 
 class IssueValidator {
-  private templatesPath: string;
-
   constructor() {
     this.templatesPath = 'templates/planning';
   }
@@ -64,17 +62,17 @@ class IssueValidator {
             type: 'list',
             name: 'selectedFile',
             message: 'Select issue to validate',
-            choices: allFiles.map(file => ({
+            choices: allFiles.map((file) => ({
               name: this.formatFileChoice(file),
               value: file,
-              short: path.basename(file)
+              short: path.basename(file),
             })),
             pageSize: 15,
             filter: (input: string) => {
               // Enable search functionality
               return input;
-            }
-          }
+            },
+          },
         ]);
         filesToValidate = [selectedFile];
       }
@@ -93,10 +91,13 @@ class IssueValidator {
       }
 
       this.displayResults(results);
-
     } catch (error) {
       logger.error('Failed to validate issues:', error);
-      console.log(chalk.red(`\n❌ Failed to validate issues: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.red(
+          `\n❌ Failed to validate issues: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
       process.exit(1);
     }
   }
@@ -116,18 +117,18 @@ class IssueValidator {
     return files.sort((a, b) => {
       const aIsWorkspace = a.includes('/_workspace/');
       const bIsWorkspace = b.includes('/_workspace/');
-      
+
       if (aIsWorkspace && !bIsWorkspace) return -1;
       if (!aIsWorkspace && bIsWorkspace) return 1;
-      
+
       return a.localeCompare(b);
     });
   }
 
   private async getFilteredIssueFiles(component?: string, epic?: string): Promise<string[]> {
     const allFiles = await this.getAllIssueFiles();
-    
-    return allFiles.filter(file => {
+
+    return allFiles.filter((file) => {
       if (component && !file.includes(`/${component}/`)) {
         return false;
       }
@@ -147,11 +148,14 @@ class IssueValidator {
 
         if (entry.isDirectory()) {
           await this.scanDirectory(fullPath, files);
-        } else if (entry.isFile() && entry.name.match(/^(epic|story|task|bug|sub-task)-POP-\d+\.md$/i)) {
+        } else if (
+          entry.isFile() &&
+          entry.name.match(/^(epic|story|task|bug|sub-task)-POP-\d+\.md$/i)
+        ) {
           files.push(fullPath);
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Directory might not exist or be accessible, continue
     }
   }
@@ -160,12 +164,12 @@ class IssueValidator {
     const relativePath = path.relative(process.cwd(), filePath);
     const pathParts = relativePath.split(path.sep);
     const fileName = path.basename(filePath);
-    
+
     // Determine if it's workspace or increment
     const isWorkspace = filePath.includes('/_workspace/');
     const incrementIndex = pathParts.indexOf('increments');
     const component = pathParts[incrementIndex + 2] || 'unknown';
-    
+
     if (isWorkspace) {
       return `${fileName} (${component}) [workspace]`;
     } else {
@@ -182,13 +186,13 @@ class IssueValidator {
       component: 'unknown',
       isValid: true,
       errors: [],
-      warnings: []
+      warnings: [],
     };
 
     try {
       const content = await fs.readFile(filePath, 'utf8');
       const { frontmatter, issueContent } = this.parseMarkdown(content);
-      
+
       result.key = frontmatter.properties?.key || 'unknown';
       result.type = frontmatter.properties?.type || 'unknown';
       result.component = this.extractComponentFromPath(filePath);
@@ -198,10 +202,11 @@ class IssueValidator {
       result.errors.push(...templateValidation.errors);
       result.warnings.push(...templateValidation.warnings);
       result.isValid = templateValidation.errors.length === 0;
-
     } catch (error) {
       result.isValid = false;
-      result.errors.push(`Failed to parse file: ${error instanceof Error ? error.message : String(error)}`);
+      result.errors.push(
+        `Failed to parse file: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
     return result;
@@ -214,7 +219,7 @@ class IssueValidator {
     }
 
     const frontmatter = yaml.load(frontmatterMatch[1]) as any;
-    
+
     // Extract summary and description
     const summaryMatch = content.match(/## Summary\n\n(.*?)(?=\n\n##|$)/s);
     const descriptionMatch = content.match(/## Description\n\n([\s\S]*?)$/);
@@ -227,8 +232,8 @@ class IssueValidator {
       issueContent: {
         summary,
         description,
-        type: frontmatter.properties?.type || 'unknown'
-      }
+        type: frontmatter.properties?.type || 'unknown',
+      },
     };
   }
 
@@ -241,7 +246,10 @@ class IssueValidator {
     return 'unknown';
   }
 
-  private async validateAgainstTemplate(issueContent: IssueContent, issueType: string): Promise<{ errors: string[]; warnings: string[] }> {
+  private async validateAgainstTemplate(
+    issueContent: IssueContent,
+    issueType: string
+  ): Promise<{ errors: string[]; warnings: string[] }> {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -278,7 +286,13 @@ class IssueValidator {
     const description = issueContent.description;
 
     // Check for required sections
-    const requiredSections = ['### Problem', '### Solution', '### Technical Scope', '### Constraints & Dependencies', '### Timeline'];
+    const requiredSections = [
+      '### Problem',
+      '### Solution',
+      '### Technical Scope',
+      '### Constraints & Dependencies',
+      '### Timeline',
+    ];
     for (const section of requiredSections) {
       if (!description.includes(section)) {
         errors.push(`Missing required section: ${section}`);
@@ -309,7 +323,13 @@ class IssueValidator {
     const description = issueContent.description;
 
     // Check for required sections
-    const requiredSections = ['### Story', '### Technical Details', '### Acceptance Criteria', '### Dependencies', '### Definition of Done'];
+    const requiredSections = [
+      '### Story',
+      '### Technical Details',
+      '### Acceptance Criteria',
+      '### Dependencies',
+      '### Definition of Done',
+    ];
     for (const section of requiredSections) {
       if (!description.includes(section)) {
         errors.push(`Missing required section: ${section}`);
@@ -324,7 +344,11 @@ class IssueValidator {
     // Check for user story format
     if (description.includes('### Story')) {
       const storySection = this.extractSection(description, '### Story');
-      if (!storySection.includes('As a') || !storySection.includes('I want to') || !storySection.includes('So that')) {
+      if (
+        !storySection.includes('As a') ||
+        !storySection.includes('I want to') ||
+        !storySection.includes('So that')
+      ) {
         errors.push('Story section should follow "As a... I want to... So that..." format');
       }
     }
@@ -342,7 +366,12 @@ class IssueValidator {
     const description = issueContent.description;
 
     // Check for required sections
-    const requiredSections = ['### Objective', '### Technical Approach', '### Acceptance Criteria', '### Dependencies'];
+    const requiredSections = [
+      '### Objective',
+      '### Technical Approach',
+      '### Acceptance Criteria',
+      '### Dependencies',
+    ];
     for (const section of requiredSections) {
       if (!description.includes(section)) {
         errors.push(`Missing required section: ${section}`);
@@ -375,7 +404,7 @@ class IssueValidator {
   }
 
   private displayResults(results: ValidationResult[]): void {
-    const validCount = results.filter(r => r.isValid).length;
+    const validCount = results.filter((r) => r.isValid).length;
     const invalidCount = results.length - validCount;
     const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
     const totalWarnings = results.reduce((sum, r) => sum + r.warnings.length, 0);
@@ -391,18 +420,18 @@ class IssueValidator {
     for (const result of results) {
       const status = result.isValid ? chalk.green('✅') : chalk.red('❌');
       const shortPath = path.relative(process.cwd(), result.file);
-      
+
       console.log(`\n${status} ${chalk.bold(result.key)} (${result.type}) - ${result.component}`);
       console.log(chalk.gray(`   ${shortPath}`));
 
       if (result.errors.length > 0) {
-        result.errors.forEach(error => {
+        result.errors.forEach((error) => {
           console.log(chalk.red(`   ❌ ${error}`));
         });
       }
 
       if (result.warnings.length > 0) {
-        result.warnings.forEach(warning => {
+        result.warnings.forEach((warning) => {
           console.log(chalk.yellow(`   ⚠️  ${warning}`));
         });
       }
@@ -425,35 +454,38 @@ export const validateIssuesCommand: CommandModule<{}, ValidateIssuesArgs> = {
     return yargs
       .positional('file', {
         describe: 'Path to specific issue file to validate',
-        type: 'string'
+        type: 'string',
       })
       .option('component', {
         alias: 'c',
         describe: 'Validate all issues in specific component',
-        type: 'string'
+        type: 'string',
       })
       .option('epic', {
         alias: 'e',
         describe: 'Validate all issues in specific epic',
-        type: 'string'
+        type: 'string',
       })
       .option('all', {
         alias: 'a',
         describe: 'Validate all issues in all increments',
         type: 'boolean',
-        default: false
+        default: false,
       })
       .conflicts('file', ['component', 'epic', 'all'])
       .conflicts('component', ['epic', 'all'])
       .conflicts('epic', 'all')
       .example('$0 validate-issue', 'Interactive selection of issue to validate')
       .example('$0 validate-issue --all', 'Validate all issues in all increments')
-      .example('$0 validate-issue --component idp-infra', 'Validate all issues in idp-infra component')
+      .example(
+        '$0 validate-issue --component idp-infra',
+        'Validate all issues in idp-infra component'
+      )
       .example('$0 validate-issue --epic POP-1234', 'Validate all issues in specific epic')
       .example('$0 validate-issue path/to/issue.md', 'Validate specific issue file');
   },
   handler: async (argv) => {
     const validator = new IssueValidator();
     await validator.run(argv);
-  }
+  },
 };

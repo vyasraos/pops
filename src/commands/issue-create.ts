@@ -1,14 +1,14 @@
-import { CommandModule } from 'yargs';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as yaml from 'js-yaml';
+import type { CommandModule } from 'yargs';
 import { JiraApiClient } from '../services/jira-api-client';
 import { MarkdownProcessor } from '../services/markdown-processor';
+import { logger } from '../utils/logger';
 import { POPSConfig } from '../utils/pops-config';
 import { SimpleMapper } from '../utils/simple-mapper';
-import { logger } from '../utils/logger';
 
 interface IssueCreateArgs {
   workspace?: string;
@@ -44,22 +44,22 @@ class IssueCreator {
 
       // Step 1: Issue Type
       const issueType = await this.promptIssueType();
-      
+
       // Step 2: Summary
       const summary = await this.promptSummary();
-      
+
       // Step 3: Description
       const description = await this.promptDescription();
-      
+
       // Step 4: Component
       const component = await this.promptComponent();
-      
+
       // Step 5: Epic (if Story or Task)
       let epic: string | undefined;
       if (issueType === 'Story' || issueType === 'Task') {
         epic = await this.promptEpic(component);
       }
-      
+
       // Step 6: Labels
       const labels = await this.promptLabels();
 
@@ -69,24 +69,27 @@ class IssueCreator {
         description,
         component,
         epic,
-        labels
+        labels,
       };
 
       // Create the issue in Jira
       console.log(chalk.blue('\n🚀 Creating issue in Jira...'));
       const createdIssue = await this.createJiraIssue(issueData);
-      
+
       // Create the markdown file in _workspace
       console.log(chalk.blue('📝 Creating markdown file...'));
       await this.createMarkdownFile(createdIssue, issueData);
 
-      console.log(chalk.green(`\n✅ Issue created successfully!`));
+      console.log(chalk.green('\n✅ Issue created successfully!'));
       console.log(chalk.green(`   Key: ${createdIssue.key}`));
       console.log(chalk.green(`   URL: ${this.getJiraUrl(createdIssue.key)}`));
-
     } catch (error) {
       logger.error('Failed to create issue:', error);
-      console.log(chalk.red(`\n❌ Failed to create issue: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.red(
+          `\n❌ Failed to create issue: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
       process.exit(1);
     }
   }
@@ -102,10 +105,10 @@ class IssueCreator {
           { name: 'Story', value: 'Story' },
           { name: 'Task', value: 'Task' },
           { name: 'Bug', value: 'Bug' },
-          { name: 'Sub-task', value: 'Sub-task' }
+          { name: 'Sub-task', value: 'Sub-task' },
         ],
-        default: 'Story'
-      }
+        default: 'Story',
+      },
     ]);
     return issueType;
   }
@@ -121,8 +124,8 @@ class IssueCreator {
             return 'Summary is required';
           }
           return true;
-        }
-      }
+        },
+      },
     ]);
     return summary.trim();
   }
@@ -133,8 +136,8 @@ class IssueCreator {
         type: 'input',
         name: 'description',
         message: 'Description',
-        default: ''
-      }
+        default: '',
+      },
     ]);
     return description.trim();
   }
@@ -146,9 +149,9 @@ class IssueCreator {
         type: 'list',
         name: 'component',
         message: 'Components',
-        choices: components.map(comp => ({ name: comp.name, value: comp.name })),
-        default: components[0]?.name
-      }
+        choices: components.map((comp) => ({ name: comp.name, value: comp.name })),
+        default: components[0]?.name,
+      },
     ]);
     return component;
   }
@@ -168,13 +171,13 @@ class IssueCreator {
           message: 'Epic',
           choices: [
             { name: 'None', value: '' },
-            ...epics.map(epic => ({ 
-              name: `${epic.key}: ${epic.summary}`, 
-              value: epic.key 
-            }))
+            ...epics.map((epic) => ({
+              name: `${epic.key}: ${epic.summary}`,
+              value: epic.key,
+            })),
           ],
-          default: ''
-        }
+          default: '',
+        },
       ]);
       return epic || undefined;
     } catch (error) {
@@ -186,9 +189,9 @@ class IssueCreator {
   private async promptLabels(): Promise<string[]> {
     // Get default labels and options from scope.yaml
     const labelConfig = await this.getLabelConfiguration();
-    
+
     let selectedLabels: string[] = [];
-    
+
     // If there are label options, let user select from them
     if (labelConfig.options && labelConfig.options.length > 0) {
       const { labels } = await inquirer.prompt([
@@ -196,9 +199,9 @@ class IssueCreator {
           type: 'checkbox',
           name: 'labels',
           message: 'Select labels (optional - press Tab then Enter to skip)',
-          choices: labelConfig.options.map(option => ({ name: option, value: option })),
-          default: []
-        }
+          choices: labelConfig.options.map((option) => ({ name: option, value: option })),
+          default: [],
+        },
       ]);
       selectedLabels = labels || [];
     } else {
@@ -208,19 +211,19 @@ class IssueCreator {
           type: 'input',
           name: 'labels',
           message: 'Additional labels (comma-separated, optional - press Enter to skip)',
-          default: ''
-        }
+          default: '',
+        },
       ]);
-      
+
       selectedLabels = labels
         .split(',')
         .map((label: string) => label.trim())
         .filter((label: string) => label.length > 0);
     }
-    
+
     // Combine default labels with selected labels
     const allLabels = [...(labelConfig.defaults || []), ...selectedLabels];
-    
+
     // Remove duplicates while preserving order
     return [...new Set(allLabels)];
   }
@@ -233,7 +236,9 @@ class IssueCreator {
       return scope.components || [];
     } catch (error) {
       logger.error('Failed to read scope.yaml:', error);
-      throw new Error('Could not read component configuration. Please ensure _workspace/.config/scope.yaml exists.');
+      throw new Error(
+        'Could not read component configuration. Please ensure _workspace/.config/scope.yaml exists.'
+      );
     }
   }
 
@@ -242,11 +247,11 @@ class IssueCreator {
       const scopePath = path.join(this.workspacePath, '.config', 'scope.yaml');
       const scopeContent = await fs.readFile(scopePath, 'utf8');
       const scope = yaml.load(scopeContent) as any;
-      
+
       // Handle the YAML structure from scope.yaml
       let options: string[] = [];
       let defaults: string[] = [];
-      
+
       if (scope.labels) {
         // Check if labels is an array (as per the YAML structure)
         if (Array.isArray(scope.labels)) {
@@ -265,27 +270,29 @@ class IssueCreator {
           defaults = scope.labels.defaults;
         }
       }
-      
+
       return {
         options: options || [],
-        defaults: defaults || ['workspace'] // Fallback to workspace if no defaults defined
+        defaults: defaults || ['workspace'], // Fallback to workspace if no defaults defined
       };
     } catch (error) {
       logger.error('Failed to read label configuration from scope.yaml:', error);
       // Return fallback configuration
       return {
         options: [],
-        defaults: ['workspace']
+        defaults: ['workspace'],
       };
     }
   }
 
-  private async getEpicsForComponent(componentName: string): Promise<Array<{ key: string; summary: string }>> {
+  private async getEpicsForComponent(
+    componentName: string
+  ): Promise<Array<{ key: string; summary: string }>> {
     try {
       const epics = await this.jiraClient.getAllEpicsByComponent(componentName);
-      return epics.map(epic => ({
+      return epics.map((epic) => ({
         key: epic.key,
-        summary: epic.fields.summary
+        summary: epic.fields.summary,
       }));
     } catch (error) {
       logger.warn(`Failed to fetch epics for component ${componentName}:`, error);
@@ -301,7 +308,7 @@ class IssueCreator {
       description: issueData.description,
       issuetype: { name: issueData.type },
       components: [{ name: issueData.component }],
-      labels: issueData.labels
+      labels: issueData.labels,
     };
 
     // Try to get mapping from template and apply it
@@ -309,7 +316,7 @@ class IssueCreator {
       const templateMapping = await this.getTemplateMapping(issueData.type);
       if (templateMapping) {
         console.log(chalk.blue('📋 Applying template field mappings...'));
-        
+
         // Create properties object from issueData
         const properties = {
           key: '', // Will be set by Jira
@@ -319,28 +326,30 @@ class IssueCreator {
           components: [issueData.component],
           labels: issueData.labels,
           status: 'To Do',
-          points: null
+          points: null,
         };
 
         const mappedFields = this.mapper.mapPropertiesToJira(properties, templateMapping);
         const additionalFields = this.mapper.convertToJiraFields(mappedFields);
-        
+
         // Merge with existing fields (additionalFields is already the fields object)
         jiraFields = { ...jiraFields, ...additionalFields };
-        
-        console.log(chalk.green(`✅ Applied ${Object.keys(mappedFields).length} template mappings`));
+
+        console.log(
+          chalk.green(`✅ Applied ${Object.keys(mappedFields).length} template mappings`)
+        );
       }
-    } catch (error) {
+    } catch (_error) {
       console.log(chalk.yellow('⚠️  Could not apply template mappings, using defaults'));
     }
 
     // Legacy fallback for Epic Link and Epic Name
     if (issueData.epic && (issueData.type === 'Story' || issueData.type === 'Task')) {
-      jiraFields['customfield_10000'] = issueData.epic; // Epic Link field
+      jiraFields.customfield_10000 = issueData.epic; // Epic Link field
     }
 
     if (issueData.type === 'Epic') {
-      jiraFields['customfield_10002'] = issueData.summary; // Epic Name field
+      jiraFields.customfield_10002 = issueData.summary; // Epic Name field
     }
 
     const payload = { fields: jiraFields };
@@ -349,16 +358,20 @@ class IssueCreator {
 
   private async getTemplateMapping(issueType: string): Promise<any> {
     try {
-      const templatePath = path.join(process.cwd(), 'templates/planning', `${issueType.toLowerCase()}.md`);
+      const templatePath = path.join(
+        process.cwd(),
+        'templates/planning',
+        `${issueType.toLowerCase()}.md`
+      );
       const templateContent = await fs.readFile(templatePath, 'utf8');
-      
+
       // Extract frontmatter from template
       const frontmatterMatch = templateContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatter = yaml.load(frontmatterMatch[1]) as any;
         return frontmatter.mapping;
       }
-    } catch (error) {
+    } catch (_error) {
       // Template not found or no mapping, return null
     }
     return null;
@@ -384,17 +397,17 @@ class IssueCreator {
 
     // Generate the markdown content
     const markdownContent = await this.generateMarkdownContent(createdIssue, issueData);
-    
+
     // Determine the filename
     const filename = this.generateFilename(createdIssue.key, issueData.type);
     const filePath = path.join(targetDir, filename);
-    
+
     // Write the file
     await fs.writeFile(filePath, markdownContent, 'utf8');
     console.log(chalk.green(`   📄 Created: ${path.relative(process.cwd(), filePath)}`));
   }
 
-  private generateEpicFolderName(issueKey: string, summary: string): string {
+  private generateEpicFolderName(_issueKey: string, summary: string): string {
     // For epics, slugify the summary to create directory name
     // (e.g., "BMH Dagger Modules" -> "epic-bmh-dagger-modules")
     const cleanSummary = summary
@@ -411,14 +424,14 @@ class IssueCreator {
       const client = await this.jiraClient.getPublicClient();
       const response = await client.get(`/issue/${epicKey}`);
       const epicSummary = response.data.fields.summary;
-      
+
       // Create slugified directory name from epic summary
       const cleanSummary = epicSummary
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-')
         .substring(0, 50);
-      
+
       return `epic-${cleanSummary}`;
     } catch (error) {
       logger.warn(`Failed to get epic details for ${epicKey}:`, error);
@@ -443,12 +456,15 @@ class IssueCreator {
         issuetype: { name: issueData.type },
         components: [{ name: issueData.component }],
         labels: issueData.labels,
-        status: { name: 'To Do' }
-      }
+        status: { name: 'To Do' },
+      },
     };
 
     // Use the markdown processor to generate content
-    return await this.markdownProcessor.generateMarkdownPublic(mockIssueData, issueData.type.toLowerCase() as 'epic' | 'story' | 'task');
+    return await this.markdownProcessor.generateMarkdownPublic(
+      mockIssueData,
+      issueData.type.toLowerCase() as 'epic' | 'story' | 'task'
+    );
   }
 
   private getJiraUrl(issueKey: string): string {
@@ -467,19 +483,23 @@ export const issueCreateCommand: CommandModule<{}, IssueCreateArgs> = {
         alias: 'w',
         type: 'string',
         description: 'Workspace directory (default: _workspace)',
-        default: '_workspace'
+        default: '_workspace',
       })
       .example('$0 issue-create', 'Create a new issue interactively')
       .example('$0 issue-create --workspace backlog', 'Create issue in backlog workspace');
   },
-  handler: async (args) => {
+  handler: async (_args) => {
     try {
       const creator = new IssueCreator();
       await creator.createIssue();
     } catch (error) {
       logger.error('Error creating issue:', error);
-      console.log(chalk.red(`\n❌ An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`));
+      console.log(
+        chalk.red(
+          `\n❌ An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
       process.exit(1);
     }
-  }
+  },
 };

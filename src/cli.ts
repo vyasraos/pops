@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
 
+import chalk from 'chalk';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import chalk from 'chalk';
 import { validateCommand } from './commands/config';
 import { fetchEpicsCommand } from './commands/fetch-epics';
-import { processEpicsCommand } from './commands/process-epics';
 import { issueCreateCommand } from './commands/issue-create';
-import { issueUpdateCommand } from './commands/issue-update';
 import { issuePromoteCommand } from './commands/issue-promote';
 import { issueRefineCommand } from './commands/issue-refine';
+import { issueUpdateCommand } from './commands/issue-update';
+import { processEpicsCommand } from './commands/process-epics';
 import { validateIssuesCommand } from './commands/validate-issues';
 
 const cli = yargs(hideBin(process.argv))

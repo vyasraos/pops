@@ -1,12 +1,8 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { type AxiosError, type AxiosInstance } from 'axios';
 import * as dotenv from 'dotenv';
+import type { JiraComponent, JiraProject } from '../types';
 import { logger } from '../utils/logger';
 import { POPSConfig } from '../utils/pops-config';
-import {
-  JiraProject,
-  JiraComponent,
-  JiraIssueType
-} from '../types';
 
 // Load environment variables
 dotenv.config();
@@ -32,11 +28,15 @@ export class JiraApiClient {
     const apiToken = process.env.JIRA_PERSONAL_TOKEN;
 
     if (!jiraBaseUrl) {
-      throw new Error('JIRA base URL not found in pops.toml file. Please add [jira] base_url configuration.');
+      throw new Error(
+        'JIRA base URL not found in pops.toml file. Please add [jira] base_url configuration.'
+      );
     }
 
     if (!apiToken) {
-      throw new Error('JIRA_PERSONAL_TOKEN environment variable is required. Please set it in your .env file or environment.');
+      throw new Error(
+        'JIRA_PERSONAL_TOKEN environment variable is required. Please set it in your .env file or environment.'
+      );
     }
 
     logger.info(`Initializing JIRA API client for ${jiraBaseUrl}`);
@@ -44,8 +44,8 @@ export class JiraApiClient {
     this.client = axios.create({
       baseURL: `${jiraBaseUrl}/rest/api/2`,
       headers: {
-        'Authorization': `Bearer ${apiToken}`,
-        'Accept': 'application/json',
+        Authorization: `Bearer ${apiToken}`,
+        Accept: 'application/json',
         'Content-Type': 'application/json',
       },
       timeout: 30000, // 30 second timeout
@@ -69,12 +69,18 @@ export class JiraApiClient {
         if (error.response?.data && typeof error.response.data === 'object') {
           const errorData = error.response.data as any;
           let errorMessage = 'JIRA API Error: ';
-          
+
           // Handle different JIRA error response formats
-          if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+          if (
+            errorData.errorMessages &&
+            Array.isArray(errorData.errorMessages) &&
+            errorData.errorMessages.length > 0
+          ) {
             errorMessage += errorData.errorMessages.join(', ');
           } else if (errorData.errors && typeof errorData.errors === 'object') {
-            const errorDetails = Object.entries(errorData.errors).map(([key, value]) => `${key}: ${value}`).join(', ');
+            const errorDetails = Object.entries(errorData.errors)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join(', ');
             errorMessage += errorDetails;
           } else if (errorData.message) {
             errorMessage += errorData.message;
@@ -84,12 +90,12 @@ export class JiraApiClient {
             // If no specific error format, show the raw response for debugging
             errorMessage += `Raw response: ${JSON.stringify(errorData, null, 2)}`;
           }
-          
+
           // Add HTTP status if available
           if (error.response?.status) {
             errorMessage += ` (HTTP ${error.response.status})`;
           }
-          
+
           throw new Error(errorMessage);
         }
 
@@ -103,15 +109,14 @@ export class JiraApiClient {
     return this.client;
   }
 
-
   // Project operations for validation
   async getProject(projectKey: string): Promise<JiraProject> {
     try {
       const client = await this.getClient();
       const response = await client.get(`/project/${projectKey}`, {
         params: {
-          expand: 'issueTypes,components'
-        }
+          expand: 'issueTypes,components',
+        },
       });
 
       const project = response.data;
@@ -125,9 +130,9 @@ export class JiraApiClient {
           name: it.name,
           description: it.description,
           iconUrl: it.iconUrl,
-          subtask: it.subtask || false
+          subtask: it.subtask || false,
         })),
-        components: project.components?.map(this.mapComponent)
+        components: project.components?.map(this.mapComponent),
       };
     } catch (error) {
       logger.error(`Failed to get project ${projectKey}`, error);
@@ -135,22 +140,17 @@ export class JiraApiClient {
     }
   }
 
-
-
-
-
-
   // New methods for data-driven approach
 
   async getIssue(issueKey: string): Promise<any> {
     try {
       const client = await this.getClient();
-      
+
       const response = await client.get(`/issue/${issueKey}`, {
         params: {
           fields: '*all',
-          expand: 'renderedFields'
-        }
+          expand: 'renderedFields',
+        },
       });
 
       if (response.data) {
@@ -166,8 +166,12 @@ export class JiraApiClient {
           logger.error(`Issue ${issueKey} not found`);
           return null;
         }
-        logger.error(`JIRA API Error: ${axiosError.response?.data || axiosError.message} (HTTP ${axiosError.response?.status})`);
-        throw new Error(`JIRA API Error: ${axiosError.response?.data || axiosError.message} (HTTP ${axiosError.response?.status})`);
+        logger.error(
+          `JIRA API Error: ${axiosError.response?.data || axiosError.message} (HTTP ${axiosError.response?.status})`
+        );
+        throw new Error(
+          `JIRA API Error: ${axiosError.response?.data || axiosError.message} (HTTP ${axiosError.response?.status})`
+        );
       }
       logger.error('Failed to fetch issue:', error);
       throw error;
@@ -179,75 +183,86 @@ export class JiraApiClient {
       const client = await this.getClient();
       const tomlConfig = this.popsConfig.getConfig();
       const projectKey = tomlConfig.jira?.project || 'APE';
-      
+
       // Try multiple approaches to find children
       // First try the standard Jira parent field
       let jql = `project = ${projectKey} AND parent = ${parentKey} AND labels NOT IN ("workspace")`;
-      
+
       try {
         const response = await client.get('/search', {
           params: {
             jql,
             maxResults: 100,
             fields: '*all',
-            expand: 'renderedFields'
-          }
+            expand: 'renderedFields',
+          },
         });
 
-        if (response.data && response.data.issues && response.data.issues.length > 0) {
-          logger.info(`Found ${response.data.issues.length} children for epic ${parentKey} using parent field`);
+        if (response.data?.issues && response.data.issues.length > 0) {
+          logger.info(
+            `Found ${response.data.issues.length} children for epic ${parentKey} using parent field`
+          );
           return response.data.issues;
         }
-      } catch (error) {
-        logger.debug(`Parent field approach failed for ${parentKey}, trying alternative approaches`);
+      } catch (_error) {
+        logger.debug(
+          `Parent field approach failed for ${parentKey}, trying alternative approaches`
+        );
       }
 
       // If parent field doesn't work, try using Epic Link field
       jql = `project = ${projectKey} AND "Epic Link" = ${parentKey} AND labels NOT IN ("workspace")`;
-      
+
       try {
         const response = await client.get('/search', {
           params: {
             jql,
             maxResults: 100,
             fields: '*all',
-            expand: 'renderedFields'
-          }
+            expand: 'renderedFields',
+          },
         });
 
-        if (response.data && response.data.issues && response.data.issues.length > 0) {
-          logger.info(`Found ${response.data.issues.length} children for epic ${parentKey} using Epic Link field`);
+        if (response.data?.issues && response.data.issues.length > 0) {
+          logger.info(
+            `Found ${response.data.issues.length} children for epic ${parentKey} using Epic Link field`
+          );
           return response.data.issues;
         }
-      } catch (error) {
-        logger.debug(`Epic Link field approach failed for ${parentKey}, trying custom field approach`);
+      } catch (_error) {
+        logger.debug(
+          `Epic Link field approach failed for ${parentKey}, trying custom field approach`
+        );
       }
 
       // If Epic Link doesn't work, try customfield_10000 (as defined in schemas)
       jql = `project = ${projectKey} AND customfield_10000 = ${parentKey} AND labels NOT IN ("workspace")`;
-      
+
       try {
         const response = await client.get('/search', {
           params: {
             jql,
             maxResults: 100,
             fields: '*all',
-            expand: 'renderedFields'
-          }
+            expand: 'renderedFields',
+          },
         });
 
-        if (response.data && response.data.issues && response.data.issues.length > 0) {
-          logger.info(`Found ${response.data.issues.length} children for epic ${parentKey} using customfield_10000`);
+        if (response.data?.issues && response.data.issues.length > 0) {
+          logger.info(
+            `Found ${response.data.issues.length} children for epic ${parentKey} using customfield_10000`
+          );
           return response.data.issues;
         }
-      } catch (error) {
+      } catch (_error) {
         logger.debug(`Custom field approach failed for ${parentKey}`);
       }
 
       // If all approaches fail, return empty array
-      logger.warn(`No children found for epic ${parentKey} using any known parent-child relationship field`);
+      logger.warn(
+        `No children found for epic ${parentKey} using any known parent-child relationship field`
+      );
       return [];
-
     } catch (error) {
       logger.error(`Failed to get children for issue ${parentKey}`, error);
       throw error;
@@ -259,15 +274,15 @@ export class JiraApiClient {
       const client = await this.getClient();
       const tomlConfig = this.popsConfig.getConfig();
       const projectKey = tomlConfig.jira?.project || 'APE';
-      
+
       const jql = `project = ${projectKey} AND component = "${componentName}" AND issuetype = Epic AND labels NOT IN ("workspace")`;
       const response = await client.get('/search', {
         params: {
           jql,
           maxResults: 100,
           fields: '*all',
-          expand: 'renderedFields'
-        }
+          expand: 'renderedFields',
+        },
       });
 
       if (!response.data || !response.data.issues) {
@@ -287,15 +302,15 @@ export class JiraApiClient {
       const client = await this.getClient();
       const tomlConfig = this.popsConfig.getConfig();
       const projectKey = tomlConfig.jira?.project || 'APE';
-      
+
       const jql = `project = ${projectKey} AND component = "${componentName}" AND issuetype = Epic`;
       const response = await client.get('/search', {
         params: {
           jql,
           maxResults: 100,
           fields: '*all',
-          expand: 'renderedFields'
-        }
+          expand: 'renderedFields',
+        },
       });
 
       if (!response.data || !response.data.issues) {
@@ -323,8 +338,8 @@ export class JiraApiClient {
       const response = await client.get('/component/page', {
         params: {
           projectIds: projectId,
-          maxResults: 100
-        }
+          maxResults: 100,
+        },
       });
 
       return response.data.values.map(this.mapComponent);
@@ -333,7 +348,6 @@ export class JiraApiClient {
       throw error;
     }
   }
-
 
   // Issue creation method
   async createIssue(payload: any): Promise<any> {
@@ -379,8 +393,7 @@ export class JiraApiClient {
       leadUserName: component.lead?.name,
       assigneeType: component.assigneeType,
       realAssigneeType: component.realAssigneeType,
-      isAssigneeTypeValid: component.isAssigneeTypeValid
+      isAssigneeTypeValid: component.isAssigneeTypeValid,
     };
   }
-
 }

@@ -1,0 +1,329 @@
+import * as fs from 'fs';
+import * as yaml from 'js-yaml';
+import * as crypto from 'crypto';
+
+export interface SyncMetadata {
+  issueKey: string | null;
+  lastSync: string | null;
+  localHash: string | null;
+  remoteHash: string | null;
+}
+
+export interface StandardFields {
+  project: string | null;
+  type: string;
+  components: string[];
+  labels: string[];
+  status: string | null;
+}
+
+export interface CustomFields {
+  customfield_12401?: string;  // Workstream
+  customfield_12400?: string;  // Virtualization Initiative
+  customfield_10006?: number;  // Story Points
+  customfield_10000?: string | null;  // Parent
+}
+
+export interface FrontmatterData {
+  standard: StandardFields;
+  custom: CustomFields;
+  sync: SyncMetadata;
+}
+
+export interface ParsedMarkdown {
+  frontmatter: FrontmatterData;
+  content: string;
+  rawContent: string;
+}
+
+export class FrontmatterParser {
+  private static readonly FRONTMATTER_DELIMITER = '---';
+
+  /**
+   * Parse markdown file with YAML frontmatter
+   */
+  static parseFile(filePath: string): ParsedMarkdown {
+    const rawContent = fs.readFileSync(filePath, 'utf-8');
+    return this.parseContent(rawContent);
+  }
+
+  /**
+   * Parse markdown content with YAML frontmatter
+   */
+  static parseContent(content: string): ParsedMarkdown {
+    const lines = content.split('\n');
+    
+    if (lines.length < 2 || lines[0] !== this.FRONTMATTER_DELIMITER) {
+      // File doesn't have frontmatter, create default
+      const defaultFrontmatter = this.createFromTemplate('Epic');
+      return {
+        frontmatter: defaultFrontmatter,
+        content: content,
+        rawContent: content
+      };
+    }
+
+    let frontmatterEndIndex = -1;
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i] === this.FRONTMATTER_DELIMITER) {
+        frontmatterEndIndex = i;
+        break;
+      }
+    }
+
+    if (frontmatterEndIndex === -1) {
+      throw new Error('Frontmatter not properly closed');
+    }
+
+    const frontmatterLines = lines.slice(1, frontmatterEndIndex);
+    const contentLines = lines.slice(frontmatterEndIndex + 1);
+    
+    const frontmatterYaml = frontmatterLines.join('\n');
+    const markdownContent = contentLines.join('\n');
+
+    const frontmatter = yaml.load(frontmatterYaml) as any;
+    
+    return {
+      frontmatter: this.normalizeFrontmatter(frontmatter),
+      content: markdownContent,
+      rawContent: content
+    };
+  }
+
+  /**
+   * Normalize frontmatter to ensure all required fields exist
+   */
+  private static normalizeFrontmatter(data: any): FrontmatterData {
+    return {
+      standard: {
+        project: data.standard?.project || null,
+        type: data.standard?.type || 'Epic',
+        components: data.standard?.components || [],
+        labels: data.standard?.labels || [],
+        status: data.standard?.status || null
+      },
+      custom: {
+        customfield_12401: data.custom?.customfield_12401 || 'IaC',
+        customfield_12400: data.custom?.customfield_12400 || 'Private Cloud 2.0',
+        customfield_10006: data.custom?.customfield_10006 || 0,
+        customfield_10000: data.custom?.customfield_10000 || null
+      },
+      sync: {
+        issueKey: data.sync?.issueKey || null,
+        lastSync: data.sync?.lastSync || null,
+        localHash: data.sync?.localHash || null,
+        remoteHash: data.sync?.remoteHash || null
+      }
+    };
+  }
+
+  /**
+   * Serialize frontmatter and content back to markdown
+   */
+  static serialize(parsed: ParsedMarkdown): string {
+    const frontmatterYaml = yaml.dump(parsed.frontmatter, {
+      indent: 2,
+      lineWidth: -1,
+      noRefs: true
+    });
+
+    return [
+      this.FRONTMATTER_DELIMITER,
+      frontmatterYaml.trim(),
+      this.FRONTMATTER_DELIMITER,
+      '',
+      parsed.content
+    ].join('\n');
+  }
+
+  /**
+   * Calculate hash of content (excluding frontmatter sync metadata)
+   */
+  static calculateContentHash(content: string): string {
+    const parsed = this.parseContent(content);
+    
+    // Create content without sync metadata for hashing
+    const contentForHash = {
+      ...parsed.frontmatter,
+      sync: {
+        ...parsed.frontmatter.sync,
+        localHash: null,
+        remoteHash: null
+      }
+    };
+
+    const contentString = JSON.stringify(contentForHash) + parsed.content;
+    return crypto.createHash('md5').update(contentString).digest('hex');
+  }
+
+  /**
+   * Update sync metadata in frontmatter
+   */
+  static updateSyncMetadata(
+    content: string, 
+    updates: Partial<SyncMetadata>
+  ): string {
+    const parsed = this.parseContent(content);
+    
+    parsed.frontmatter.sync = {
+      ...parsed.frontmatter.sync,
+      ...updates
+    };
+
+    return this.serialize(parsed);
+  }
+
+  /**
+   * Update standard fields in frontmatter
+   */
+  static updateStandardFields(
+    content: string,
+    updates: Partial<StandardFields>
+  ): string {
+    const parsed = this.parseContent(content);
+    
+    parsed.frontmatter.standard = {
+      ...parsed.frontmatter.standard,
+      ...updates
+    };
+
+    return this.serialize(parsed);
+  }
+
+  /**
+   * Update custom fields in frontmatter
+   */
+  static updateCustomFields(
+    content: string,
+    updates: Partial<CustomFields>
+  ): string {
+    const parsed = this.parseContent(content);
+    
+    parsed.frontmatter.custom = {
+      ...parsed.frontmatter.custom,
+      ...updates
+    };
+
+    return this.serialize(parsed);
+  }
+
+  /**
+   * Set parent relationship for stories/tasks
+   */
+  static setParent(content: string, parentIssueKey: string): string {
+    return this.updateCustomFields(content, {
+      customfield_10000: parentIssueKey
+    });
+  }
+
+  /**
+   * Set component for epic
+   */
+  static setComponent(content: string, componentName: string): string {
+    return this.updateStandardFields(content, {
+      components: [componentName]
+    });
+  }
+
+  /**
+   * Check if file has been synced to Jira
+   */
+  static isSynced(content: string): boolean {
+    const parsed = this.parseContent(content);
+    return parsed.frontmatter.sync.issueKey !== null;
+  }
+
+  /**
+   * Get issue key from frontmatter
+   */
+  static getIssueKey(content: string): string | null {
+    const parsed = this.parseContent(content);
+    return parsed.frontmatter.sync.issueKey;
+  }
+
+  /**
+   * Get last sync timestamp
+   */
+  static getLastSync(content: string): string | null {
+    const parsed = this.parseContent(content);
+    return parsed.frontmatter.sync.lastSync;
+  }
+
+  /**
+   * Get local hash
+   */
+  static getLocalHash(content: string): string | null {
+    const parsed = this.parseContent(content);
+    return parsed.frontmatter.sync.localHash;
+  }
+
+  /**
+   * Get remote hash
+   */
+  static getRemoteHash(content: string): string | null {
+    const parsed = this.parseContent(content);
+    return parsed.frontmatter.sync.remoteHash;
+  }
+
+  /**
+   * Create new frontmatter from template
+   */
+  static createFromTemplate(
+    type: 'Epic' | 'Story' | 'Task',
+    componentName?: string,
+    parentIssueKey?: string
+  ): FrontmatterData {
+    const frontmatter: FrontmatterData = {
+      standard: {
+        project: 'APE',
+        type,
+        components: componentName ? [componentName] : [],
+        labels: [],
+        status: null
+      },
+      custom: {
+        customfield_12401: 'IaC',
+        customfield_12400: 'Private Cloud 2.0',
+        customfield_10006: 0,
+        customfield_10000: parentIssueKey || null
+      },
+      sync: {
+        issueKey: null,
+        lastSync: null,
+        localHash: null,
+        remoteHash: null
+      }
+    };
+
+    return frontmatter;
+  }
+
+  /**
+   * Validate frontmatter structure
+   */
+  static validateFrontmatter(frontmatter: FrontmatterData): string[] {
+    const errors: string[] = [];
+
+    if (!frontmatter.standard.type) {
+      errors.push('Missing required field: standard.type');
+    }
+
+    if (!frontmatter.standard.project) {
+      errors.push('Missing required field: standard.project');
+    }
+
+    if (!Array.isArray(frontmatter.standard.components)) {
+      errors.push('standard.components must be an array');
+    }
+
+    if (!Array.isArray(frontmatter.standard.labels)) {
+      errors.push('standard.labels must be an array');
+    }
+
+    if (typeof frontmatter.custom.customfield_10006 !== 'number') {
+      errors.push('custom.customfield_10006 must be a number');
+    }
+
+    return errors;
+  }
+}

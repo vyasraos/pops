@@ -1,0 +1,71 @@
+{
+  "name": "pops",
+  "version": "1.0.0",
+  "description": "Playbook Operations CLI - A tool for Jira management and other utilities with AI integration",
+  "main": "dist/index.js",
+  "bin": {
+    "pops": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "bun run tsc",
+    "build:watch": "bun run tsc --watch",
+    "build:binary": "bun build --compile --minify src/cli.ts --outfile dist/pops",
+    "build:binary-linux": "bun build --compile --target=bun-linux-x64 --minify src/cli.ts --outfile dist/pops-linux",
+    "build:binary-macos": "bun build --compile --target=bun-darwin-x64 --minify src/cli.ts --outfile dist/pops-macos",
+    "build:binary-windows": "bun build --compile --target=bun-windows-x64 --minify src/cli.ts --outfile dist/pops-windows.exe",
+    "build:binaries-all": "bun run build:binary-linux && bun run build:binary-macos && bun run build:binary-windows",
+    "dev": "bun run src/cli.ts",
+    "dev:watch": "bun --watch src/cli.ts",
+    "start": "bun run dist/cli.js",
+    "test": "bun test",
+    "lint": "bun run eslint src/**/*.ts",
+    "type-check": "bun run tsc --noEmit",
+    "link": "bun link",
+    "unlink": "bun unlink pops-cli",
+    "release": "bun run build:binaries-all"
+  },
+  "keywords": [
+    "cli",
+    "jira",
+    "playbook",
+    "operations",
+    "ai",
+    "automation"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vyasraos/pops.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vyasraos/pops/issues"
+  },
+  "homepage": "https://github.com/vyasraos/pops#readme",
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "axios": "^1.12.2",
+    "chalk": "^5.3.0",
+    "dotenv": "^16.6.1",
+    "inquirer": "^8.2.6",
+    "jira.js": "^5.2.2",
+    "js-yaml": "^4.1.0",
+    "marked": "^16.4.0",
+    "smol-toml": "^1.4.2",
+    "yargs": "^17.7.2",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^8.2.10",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.8.0",
+    "@types/yargs": "^17.0.32",
+    "@typescript-eslint/eslint-plugin": "^6.9.0",
+    "@typescript-eslint/parser": "^6.9.0",
+    "eslint": "^8.52.0",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

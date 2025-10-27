@@ -1,0 +1,318 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get version from tag
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION=${GITHUB_REF#refs/tags/}
+        fi
+
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+        # Check if it's a prerelease (contains alpha, beta, rc)
+        if [[ $VERSION =~ (alpha|beta|rc) ]]; then
+          echo "is_prerelease=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_prerelease=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Validate version format
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+          echo "❌ Invalid version format: $VERSION"
+          echo "Expected format: v1.2.3 or v1.2.3-alpha.1"
+          exit 1
+        fi
+        echo "✅ Version format is valid: $VERSION"
+
+    - name: Check if tag exists
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        if git rev-parse "$VERSION" >/dev/null 2>&1; then
+          echo "✅ Tag $VERSION exists"
+        else
+          echo "❌ Tag $VERSION does not exist"
+          exit 1
+        fi
+
+  test:
+    name: Test Before Release
+    runs-on: ${{ matrix.os }}
+    needs: validate-release
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: true
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+
+    - name: Run full test suite
+      run: |
+        bun run type-check
+        bun run lint
+        bun test
+        bun run build
+
+  build-binaries:
+    name: Build Release Binaries
+    runs-on: ubuntu-latest
+    needs: [validate-release, test]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+
+    - name: Build all binaries
+      run: bun run build:binaries-all
+
+    - name: Test binaries
+      run: |
+        chmod +x dist/pops-*
+        ./dist/pops-linux --version
+        ./dist/pops-macos --version
+
+        # Verify binary sizes are reasonable (less than 100MB each)
+        for binary in dist/pops-*; do
+          size=$(stat -c%s "$binary" 2>/dev/null || stat -f%z "$binary")
+          if [ $size -gt 104857600 ]; then
+            echo "❌ Binary $binary is too large: ${size} bytes"
+            exit 1
+          fi
+          echo "✅ Binary $binary size: ${size} bytes"
+        done
+
+    - name: Generate checksums
+      run: |
+        cd dist
+        sha256sum pops-* > checksums.txt
+        cat checksums.txt
+
+    - name: Upload binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-binaries
+        path: |
+          dist/pops-linux
+          dist/pops-macos
+          dist/pops-windows.exe
+          dist/checksums.txt
+
+  generate-changelog:
+    name: Generate Changelog
+    runs-on: ubuntu-latest
+    needs: validate-release
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate changelog
+      id: changelog
+      uses: mikepenz/release-changelog-builder-action@v4
+      with:
+        configuration: |
+          {
+            "categories": [
+              {
+                "title": "## 🚀 Features",
+                "labels": ["feature", "enhancement"]
+              },
+              {
+                "title": "## 🐛 Bug Fixes",
+                "labels": ["bug", "fix"]
+              },
+              {
+                "title": "## 📚 Documentation",
+                "labels": ["documentation", "docs"]
+              },
+              {
+                "title": "## 🔧 Maintenance",
+                "labels": ["maintenance", "chore", "dependencies"]
+              },
+              {
+                "title": "## ⚠️ Breaking Changes",
+                "labels": ["breaking"]
+              }
+            ],
+            "ignore_labels": ["ignore-for-release"],
+            "sort": "ASC",
+            "template": "#{{CHANGELOG}}\n\n**Full Changelog**: #{{UNCATEGORIZED}}"
+          }
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate-release, build-binaries, generate-changelog]
+    outputs:
+      upload_url: ${{ steps.release.outputs.upload_url }}
+      release_id: ${{ steps.release.outputs.id }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download binaries
+      uses: actions/download-artifact@v3
+      with:
+        name: release-binaries
+        path: dist/
+
+    - name: Create Release
+      id: release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: ${{ needs.validate-release.outputs.version }}
+        name: Release ${{ needs.validate-release.outputs.version }}
+        body: |
+          # POPS CLI ${{ needs.validate-release.outputs.version }}
+
+          ## Installation
+
+          ### Quick Install
+          ```bash
+          # macOS & Linux
+          curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/install.sh | sh
+
+          # Or download directly:
+          ```
+
+          ### Manual Download
+          - **macOS**: [pops-macos](https://github.com/${{ github.repository }}/releases/download/${{ needs.validate-release.outputs.version }}/pops-macos)
+          - **Linux**: [pops-linux](https://github.com/${{ github.repository }}/releases/download/${{ needs.validate-release.outputs.version }}/pops-linux)
+          - **Windows**: [pops-windows.exe](https://github.com/${{ github.repository }}/releases/download/${{ needs.validate-release.outputs.version }}/pops-windows.exe)
+
+          ### Package Managers
+          ```bash
+          # Homebrew (macOS/Linux)
+          brew install vyasraos/tap/pops
+          ```
+
+          ---
+
+          ${{ needs.generate-changelog.outputs.changelog }}
+
+          ## Verification
+
+          All binaries are signed and can be verified:
+          ```bash
+          # Download and verify checksums
+          curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ needs.validate-release.outputs.version }}/checksums.txt
+          sha256sum -c checksums.txt
+          ```
+        artifacts: |
+          dist/pops-linux
+          dist/pops-macos
+          dist/pops-windows.exe
+          dist/checksums.txt
+          install.sh
+        prerelease: ${{ needs.validate-release.outputs.is_prerelease }}
+        draft: false
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    runs-on: ubuntu-latest
+    needs: [validate-release, create-release]
+    if: needs.validate-release.outputs.is_prerelease == 'false'
+
+    steps:
+    - name: Update Homebrew formula
+      uses: mislav/bump-homebrew-formula-action@v3
+      with:
+        formula-name: pops
+        formula-path: Formula/pops.rb
+        homebrew-tap: vyasraos/homebrew-tap
+        base-branch: main
+        download-url: https://github.com/${{ github.repository }}/releases/download/${{ needs.validate-release.outputs.version }}/pops-macos
+        commit-message: |
+          pops ${{ needs.validate-release.outputs.version }}
+
+          Created by GitHub Actions
+      env:
+        COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+
+  post-release:
+    name: Post-Release Tasks
+    runs-on: ubuntu-latest
+    needs: [validate-release, create-release, update-homebrew]
+    if: always()
+
+    steps:
+    - name: Update README badges
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create success notification
+      if: needs.create-release.result == 'success'
+      run: |
+        echo "🎉 Release ${{ needs.validate-release.outputs.version }} completed successfully!"
+        echo "📦 Binaries: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-release.outputs.version }}"
+        echo "🍺 Homebrew: brew install vyasraos/tap/pops"
+
+    - name: Create failure notification
+      if: failure()
+      run: |
+        echo "❌ Release ${{ needs.validate-release.outputs.version }} failed!"
+        echo "Check the workflow logs for details."
+        exit 1

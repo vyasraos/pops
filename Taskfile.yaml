@@ -1,0 +1,46 @@
+version: '3'
+
+# Load environment variables from .env file
+dotenv: ['.env']
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+##### POPS CLI DEVELOPMENT #####
+
+  pops:watch:
+    desc: Start POPS CLI in watch mode for development
+    cmds:
+      - echo "🚀 Starting POPS CLI in watch mode..."
+      - echo "💡 Make changes to src/ files and test instantly"
+      - echo "🔄 Use Ctrl+C to stop watching"
+      - echo "📋 Example - task pops:watch -- validate"
+      - echo ""
+      - bun run dev:watch -- {{.CLI_ARGS}}
+
+  pops:build:
+    desc: Build POPS CLI and install as global binary
+    cmds:
+      - echo "🔨 Building POPS CLI..."
+      - bun run build
+      - echo "📦 Creating global binary..."
+      - bun link
+      - echo "✅ POPS CLI installed globally!"
+      - echo "🎯 You can now run 'pops' from anywhere"
+      - echo ""
+      - pops --version
+
+  pops:dev:
+    desc: Quick test POPS command without watch mode
+    cmds:
+      - bun run dev -- {{.CLI_ARGS}}
+
+  pops:unlink:
+    desc: Remove global POPS CLI binary
+    cmds:
+      - echo "🗑️  Removing global POPS CLI..."
+      - bun unlink pops-cli
+      - echo "✅ POPS CLI removed from global binaries"

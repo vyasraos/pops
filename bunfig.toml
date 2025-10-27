@@ -1,0 +1,12 @@
+[install]
+# Use Bun's built-in package manager optimizations
+cache = true
+frozenLockfile = false
+
+[run]
+# Enable Bun's fast runtime optimizations
+bun = true
+
+[test]
+# Use Bun's built-in test runner
+preload = []

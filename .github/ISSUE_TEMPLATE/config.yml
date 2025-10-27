@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/vyasraos/pops/discussions
+    about: Ask questions, share ideas, and discuss POPS CLI with the community
+  - name: 📖 Documentation
+    url: https://vyasraos.github.io/pops
+    about: Read the comprehensive documentation and guides
+  - name: 🔍 Existing Issues
+    url: https://github.com/vyasraos/pops/issues
+    about: Search existing issues before creating a new one

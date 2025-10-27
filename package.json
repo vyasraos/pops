@@ -1,6 +1,6 @@
 {
   "name": "pops",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Playbook Operations CLI - A tool for Jira management and other utilities with AI integration",
   "main": "dist/index.js",
   "bin": {

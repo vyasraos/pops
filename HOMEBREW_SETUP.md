@@ -99,7 +99,7 @@ The GitHub Actions workflow in `pops` will automatically:
 
 The following variables are automatically updated:
 
-- `version`: Set from the git tag (e.g., v1.0.0 → 1.0.0)
+- `version`: Set from the git tag (e.g., v0.1.0 → 0.1.0)
 - `url`: Updated to point to the latest release binaries
 - `sha256`: Calculated from the downloaded binary
 

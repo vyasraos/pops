@@ -371,7 +371,7 @@ describe('JiraApiClient', () => {
    ```
 
 3. **Create GitHub release**:
-   - Tag the version: `git tag v1.0.0`
+   - Tag the version: `git tag v0.1.0`
    - Push tags: `git push --tags`
    - Create release on GitHub with binaries attached
 

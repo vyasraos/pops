@@ -30,6 +30,7 @@ class IssuePromoter {
   private dataService: JiraDataService;
   private processor: MarkdownProcessor;
   private mapper: SimpleMapper;
+  private popsConfig: POPSConfig;
 
   constructor() {
     this.jiraClient = new JiraApiClient();

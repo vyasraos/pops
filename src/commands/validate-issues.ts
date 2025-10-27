@@ -30,6 +30,8 @@ interface IssueContent {
 }
 
 class IssueValidator {
+  private templatesPath: string;
+
   constructor() {
     this.templatesPath = 'templates/planning';
   }

@@ -28,6 +28,7 @@ interface JiraIssue {
 
 class IssueRefiner {
   private jiraClient: JiraApiClient;
+  private popsConfig: POPSConfig;
 
   constructor() {
     this.jiraClient = new JiraApiClient();

@@ -117,8 +117,6 @@ jobs:
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        base: main
-        head: HEAD
         extra_args: --debug --only-verified
 
   license-scan:
@@ -151,7 +149,7 @@ jobs:
         npx license-checker --json --out licenses.json
 
     - name: Upload license report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: license-report
         path: |
@@ -214,7 +212,7 @@ jobs:
         format: spdx-json
 
     - name: Upload SBOM
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: sbom
         path: |

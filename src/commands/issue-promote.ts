@@ -140,6 +140,17 @@ class IssuePromoter {
       console.log(chalk.blue('📝 Processing issue to target increment...'));
       await this.processor.processSingleIssue(issueKey);
 
+      // Clean up the original workspace file
+      console.log(chalk.blue('🧹 Cleaning up workspace file...'));
+      try {
+        await fs.unlink(targetFile);
+        console.log(chalk.green(`✅ Removed workspace file: ${path.relative(process.cwd(), targetFile)}`));
+      } catch (error) {
+        logger.warn(`Failed to remove workspace file ${targetFile}:`, error);
+        console.log(chalk.yellow(`⚠️  Could not remove workspace file: ${path.relative(process.cwd(), targetFile)}`));
+        console.log(chalk.yellow('   You may need to remove it manually'));
+      }
+
       console.log(chalk.green('\n✅ Issue promoted successfully!'));
       console.log(chalk.green(`   Key: ${issueKey}`));
       console.log(chalk.green(`   Promotion: workspace → ${promotionLabel}`));

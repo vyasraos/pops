@@ -5,7 +5,7 @@
 class Pops < Formula
   desc "Playbook Operations CLI - A tool for Jira management and project automation"
   homepage "https://github.com/vyasraos/pops"
-  version "0.1.0" # This will be automatically updated by GitHub Actions
+  version "0.1.1" # This will be automatically updated by GitHub Actions
   license "Apache-2.0"
 
   on_macos do

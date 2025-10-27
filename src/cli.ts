@@ -15,7 +15,7 @@ import { validateIssuesCommand } from './commands/validate-issues';
 const cli = yargs(hideBin(process.argv))
   .scriptName('pops')
   .usage(chalk.blue('$0 <command> [options]'))
-  .version('0.1.0')
+  .version('0.1.1')
   .help('help')
   .alias('h', 'help')
   .alias('v', 'version')

@@ -4,14 +4,23 @@
  */
 
 interface MappingResult {
-  [jiraFieldPath: string]: any;
+  [jiraFieldPath: string]: unknown;
 }
+
+interface JiraFieldMapping {
+  [propertyName: string]: string;
+}
+
+interface JiraFields {
+  [fieldName: string]: unknown;
+}
+
 
 export class SimpleMapper {
   /**
    * Convert properties to Jira API fields using mapping
    */
-  mapPropertiesToJira(properties: any, mapping: any): MappingResult {
+  mapPropertiesToJira(properties: Record<string, unknown>, mapping: JiraFieldMapping): MappingResult {
     const result: MappingResult = {};
 
     // Fields that cannot be updated via API (workflow fields, etc.)
@@ -36,21 +45,21 @@ export class SimpleMapper {
    * Convert Jira API path to actual Jira field structure
    * Handles special field structures required by Jira API
    */
-  convertToJiraFields(mappedFields: MappingResult): any {
-    const fields: any = {};
+  convertToJiraFields(mappedFields: MappingResult): JiraFields {
+    const fields: JiraFields = {};
 
     for (const [apiPath, value] of Object.entries(mappedFields)) {
       this.setNestedField(fields, apiPath, value);
     }
 
     // Return only the fields object, not the nested api.fields structure
-    return fields.fields || fields;
+    return (fields as any).fields || fields;
   }
 
   /**
    * Set nested field with special handling for Jira field structures
    */
-  private setNestedField(obj: any, path: string, value: any): void {
+  private setNestedField(obj: JiraFields, path: string, value: unknown): void {
     // Handle special Jira field structures
     if (path.includes('customfield_')) {
       this.handleCustomField(obj, path, value);
@@ -86,7 +95,7 @@ export class SimpleMapper {
       if (!current[part]) {
         current[part] = {};
       }
-      current = current[part];
+      current = current[part] as JiraFields;
     }
 
     current[parts[parts.length - 1]] = value;
@@ -98,7 +107,7 @@ export class SimpleMapper {
    * - api.fields.customfield_12401.value -> { customfield_12401: { value: "IaC" } }
    * - api.fields.customfield_10006 -> { customfield_10006: 5 }
    */
-  private handleCustomField(obj: any, path: string, value: any): void {
+  private handleCustomField(obj: JiraFields, path: string, value: unknown): void {
     const parts = path.split('.');
     const customFieldId = parts.find((part) => part.startsWith('customfield_'));
 
@@ -106,12 +115,12 @@ export class SimpleMapper {
 
     // Check if it's a value-based custom field (like select fields)
     if (path.includes('.value')) {
-      obj.fields = obj.fields || {};
-      obj.fields[customFieldId] = { value: value };
+      (obj as any).fields = (obj as any).fields || {};
+      (obj as any).fields[customFieldId] = { value: value };
     } else {
       // Direct value custom field (like number fields)
-      obj.fields = obj.fields || {};
-      obj.fields[customFieldId] = value;
+      (obj as any).fields = (obj as any).fields || {};
+      (obj as any).fields[customFieldId] = value;
     }
   }
 
@@ -119,13 +128,13 @@ export class SimpleMapper {
    * Handle components array with proper Jira structure
    * Example: api.fields.components[].name -> { components: [{ name: "idp-infra" }] }
    */
-  private handleComponentsArray(obj: any, _path: string, value: any): void {
+  private handleComponentsArray(obj: JiraFields, _path: string, value: unknown): void {
     if (!Array.isArray(value)) {
       value = [value];
     }
 
-    obj.fields = obj.fields || {};
-    obj.fields.components = value.map((component: any) => {
+    (obj as any).fields = (obj as any).fields || {};
+    (obj as any).fields.components = (value as unknown[]).map((component: unknown) => {
       if (typeof component === 'string') {
         return { name: component };
       }
@@ -137,30 +146,30 @@ export class SimpleMapper {
    * Handle labels array
    * Example: api.fields.labels[] -> { labels: ["IaC", "workspace"] }
    */
-  private handleLabelsArray(obj: any, _path: string, value: any): void {
+  private handleLabelsArray(obj: JiraFields, _path: string, value: unknown): void {
     if (!Array.isArray(value)) {
       value = [value];
     }
 
-    obj.fields = obj.fields || {};
-    obj.fields.labels = value;
+    (obj as any).fields = (obj as any).fields || {};
+    (obj as any).fields.labels = value;
   }
 
   /**
    * Handle issue type with proper Jira structure
    * Example: api.fields.issuetype.name -> { issuetype: { name: "Story" } }
    */
-  private handleIssueType(obj: any, _path: string, value: any): void {
-    obj.fields = obj.fields || {};
-    obj.fields.issuetype = { name: value };
+  private handleIssueType(obj: JiraFields, _path: string, value: unknown): void {
+    (obj as any).fields = (obj as any).fields || {};
+    (obj as any).fields.issuetype = { name: value };
   }
 
   /**
    * Handle status with proper Jira structure
    * Example: api.fields.status.name -> { status: { name: "To Do" } }
    */
-  private handleStatus(obj: any, _path: string, value: any): void {
-    obj.fields = obj.fields || {};
-    obj.fields.status = { name: value };
+  private handleStatus(obj: JiraFields, _path: string, value: unknown): void {
+    (obj as any).fields = (obj as any).fields || {};
+    (obj as any).fields.status = { name: value };
   }
 }

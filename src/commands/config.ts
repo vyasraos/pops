@@ -220,7 +220,7 @@ class ConfigValidator {
   }
 }
 
-export const validateCommand: CommandModule<{}, ConfigValidateArgs> = {
+export const validateCommand: CommandModule<Record<string, never>, ConfigValidateArgs> = {
   command: 'validate',
   describe: 'Validate POPS configuration and setup',
   builder: (yargs) => {

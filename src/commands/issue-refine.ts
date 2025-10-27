@@ -28,11 +28,9 @@ interface JiraIssue {
 
 class IssueRefiner {
   private jiraClient: JiraApiClient;
-  private popsConfig: POPSConfig;
 
   constructor() {
     this.jiraClient = new JiraApiClient();
-    this.popsConfig = new POPSConfig();
   }
 
   async run(issueKey: string): Promise<void> {
@@ -215,7 +213,7 @@ ${description}
   }
 }
 
-export const issueRefineCommand: CommandModule<{}, IssueRefineArgs> = {
+export const issueRefineCommand: CommandModule<Record<string, never>, IssueRefineArgs> = {
   command: 'refine-issue <issueKey>',
   describe: 'Refine a Jira issue by fetching it and creating a markdown file for editing',
   builder: (yargs) => {

@@ -29,13 +29,13 @@ export const fetchEpicsCommand = {
       .example('$0 fetch-issues --component idp-infra', 'Fetch epics for specific component')
       .example('$0 fetch-issues --issue POP-1234', 'Fetch specific issue');
   },
-  handler: async (argv: any) => {
+  handler: async (argv: Record<string, unknown>) => {
     try {
       const popsConfig = new POPSConfig();
       const dataService = new JiraDataService();
 
       // Handle single issue fetch
-      if (argv.issue) {
+      if (argv.issue && typeof argv.issue === 'string') {
         console.log(chalk.blue(`🔍 Fetching single issue: ${argv.issue}...\n`));
         await dataService.fetchSingleIssue(argv.issue);
         console.log(chalk.green(`✅ Issue ${argv.issue} fetched successfully!`));
@@ -44,7 +44,7 @@ export const fetchEpicsCommand = {
 
       let componentsToProcess: string[] = [];
 
-      if (argv.component) {
+      if (argv.component && typeof argv.component === 'string') {
         // Use specified component
         componentsToProcess = [argv.component];
         logger.info(`Fetching epics for component: ${argv.component}`);
@@ -57,10 +57,10 @@ export const fetchEpicsCommand = {
 
         try {
           const scopeConfigContent = await fs.readFile(scopeConfigPath, 'utf8');
-          const scopeConfig = yaml.load(scopeConfigContent) as any;
+          const scopeConfig = yaml.load(scopeConfigContent) as Record<string, unknown>;
 
           if (scopeConfig?.components && Array.isArray(scopeConfig.components)) {
-            componentsToProcess = scopeConfig.components.map((comp: any) => comp.name);
+            componentsToProcess = (scopeConfig.components as Array<{ name: string }>).map((comp) => comp.name);
             logger.info(
               `Reading components from ${scopeConfigPath}: ${componentsToProcess.join(', ')}`
             );

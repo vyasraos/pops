@@ -30,14 +30,12 @@ class IssuePromoter {
   private dataService: JiraDataService;
   private processor: MarkdownProcessor;
   private mapper: SimpleMapper;
-  private popsConfig: POPSConfig;
 
   constructor() {
     this.jiraClient = new JiraApiClient();
     this.dataService = new JiraDataService();
     this.processor = new MarkdownProcessor();
     this.mapper = new SimpleMapper();
-    this.popsConfig = new POPSConfig();
   }
 
   async run(filePath?: string, target?: string): Promise<void> {
@@ -78,7 +76,7 @@ class IssuePromoter {
 
       // Read the markdown file
       const content = await fs.readFile(targetFile, 'utf8');
-      const { frontmatter, issueType } = this.parseMarkdown(content);
+      const { frontmatter } = this.parseMarkdown(content);
 
       if (!frontmatter.properties?.key) {
         throw new Error('Issue key not found in frontmatter');
@@ -294,7 +292,7 @@ class IssuePromoter {
   }
 }
 
-export const issuePromoteCommand: CommandModule<{}, IssuePromoteArgs> = {
+export const issuePromoteCommand: CommandModule<Record<string, never>, IssuePromoteArgs> = {
   command: 'promote-issue [file]',
   describe: 'Promote a workspace issue to an increment',
   builder: (yargs) => {

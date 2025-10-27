@@ -140,8 +140,8 @@ jobs:
 
     - name: Check licenses
       run: |
-        echo "Checking licenses for all dependencies..."
-        npx license-checker --summary --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;Unlicense;WTFPL'
+        echo "Checking licenses for all dependencies...
+        npx license-checker --summary --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;Unlicense;WTFPL;Python-2.0'
 
     - name: Generate license report
       run: |

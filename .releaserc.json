@@ -26,12 +26,37 @@
         "assets": [
           "CHANGELOG.md",
           "package.json",
-          "package-lock.json",
           "bun.lock"
         ],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
-    "@semantic-release/github"
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "dist/pops-linux*",
+            "label": "Linux Binary"
+          },
+          {
+            "path": "dist/pops-macos*",
+            "label": "macOS Binary"
+          },
+          {
+            "path": "dist/pops-windows*",
+            "label": "Windows Binary"
+          },
+          {
+            "path": "dist/checksums.txt",
+            "label": "Checksums"
+          },
+          {
+            "path": "install.sh",
+            "label": "Install Script"
+          }
+        ]
+      }
+    ]
   ]
 }

@@ -27,9 +27,6 @@
     "link": "bun link",
     "unlink": "bun unlink pops",
     "release": "bun run build:binaries-all",
-    "bump:patch": "./scripts/bump-version.sh patch",
-    "bump:minor": "./scripts/bump-version.sh minor",
-    "bump:major": "./scripts/bump-version.sh major",
     "semantic-release": "semantic-release"
   },
   "keywords": [

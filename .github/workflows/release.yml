@@ -1,9 +1,10 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  # Disabled - using semantic-release workflow instead
+  # push:
+  #   tags:
+  #     - 'v*.*.*'
   workflow_dispatch:
     inputs:
       version:

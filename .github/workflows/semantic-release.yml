@@ -36,6 +36,34 @@ jobs:
         run: bun test
 
       - name: Semantic Release
+        id: semantic-release
         run: bunx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Binaries
+        if: steps.semantic-release.outputs.new-release-published == 'true'
+        run: bun run build:binaries-all
+
+      - name: Test Binaries
+        if: steps.semantic-release.outputs.new-release-published == 'true'
+        run: |
+          chmod +x dist/pops-*
+          ./dist/pops-linux --version
+          ./dist/pops-macos --version
+
+      - name: Generate Checksums
+        if: steps.semantic-release.outputs.new-release-published == 'true'
+        run: |
+          cd dist
+          sha256sum pops-* > checksums.txt
+          cat checksums.txt
+
+      - name: Upload Binaries to Release
+        if: steps.semantic-release.outputs.new-release-published == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries-${{ steps.semantic-release.outputs.new-release-version }}
+          path: |
+            dist/pops-*
+            dist/checksums.txt

@@ -1,0 +1,49 @@
+{
+  "release-type": "node",
+  "packages": {
+    ".": {
+      "package-name": "pops",
+      "changelog-path": "CHANGELOG.md",
+      "version-file": "package.json"
+    }
+  },
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "draft": false,
+  "prerelease": false,
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "pull-request-title-pattern": "chore: release ${version}",
+  "pull-request-header": "Release ${version}",
+  "pull-request-footer": "If this PR has been approved by a maintainer, you can merge this PR to release. If you want to make more changes, please create a new PR.",
+  "extra-files": {
+    "dist/pops-linux-x64": {
+      "type": "generic",
+      "path": "dist/pops-linux-x64"
+    },
+    "dist/pops-linux-arm64": {
+      "type": "generic", 
+      "path": "dist/pops-linux-arm64"
+    },
+    "dist/pops-macos-x64": {
+      "type": "generic",
+      "path": "dist/pops-macos-x64"
+    },
+    "dist/pops-macos-arm64": {
+      "type": "generic",
+      "path": "dist/pops-macos-arm64"
+    },
+    "dist/pops-windows-x64.exe": {
+      "type": "generic",
+      "path": "dist/pops-windows-x64.exe"
+    },
+    "dist/checksums.txt": {
+      "type": "generic",
+      "path": "dist/checksums.txt"
+    },
+    "install.sh": {
+      "type": "generic",
+      "path": "install.sh"
+    }
+  }
+}

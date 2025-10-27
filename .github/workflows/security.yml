@@ -113,15 +113,8 @@ jobs:
     - name: Run FOSSA scan
       uses: fossa-contrib/fossa-action@v2
       with:
-        api-key: ${{ secrets.FOSSA_API_KEY }}
-        project-name: ${{ github.repository }}
-        project-url: ${{ github.server_url }}/${{ github.repository }}
-        branch: ${{ github.ref_name }}
-        commit: ${{ github.sha }}
-        build-command: |
-          bun run build
-        test-command: |
-          bun run test
+        fossa-api-key: ${{ secrets.FOSSA_API_KEY }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 
   secret-scan:
     name: Secret Detection
@@ -171,7 +164,7 @@ jobs:
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [codeql, dependency-scan, secret-scan, sbom-generation, fossa-scan]
+    needs: [codeql, dependency-scan, secret-scan, sbom-generation]
     if: always()
 
     steps:
@@ -202,12 +195,6 @@ jobs:
           echo "✅ **SBOM Generation**: Software Bill of Materials generated" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **SBOM Generation**: Failed to generate SBOM" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        if [[ "${{ needs.fossa-scan.result }}" == "success" ]]; then
-          echo "✅ **FOSSA Scan**: Security and license compliance check passed" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **FOSSA Scan**: Security or license issues found" >> $GITHUB_STEP_SUMMARY
         fi
 
         echo "" >> $GITHUB_STEP_SUMMARY

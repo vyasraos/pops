@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/crates/oxc_linter/src/schemas/oxlint.schema.json",
+  "rules": {
+    "import/no-cycle": "error",
+    "import/no-self-import": "error",
+    "import/no-default-export": "off",
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-unused-vars": "error",
+    "unicorn/filename-case": "off",
+    "eslint/no-unused-vars": "error",
+    "eslint/no-undef": "error",
+    "eslint/prefer-const": "error",
+    "eslint/no-var": "error",
+    "eslint/no-console": "off"
+  },
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "globals": {
+    "process": "readonly",
+    "Buffer": "readonly",
+    "__dirname": "readonly",
+    "__filename": "readonly",
+    "global": "readonly"
+  }
+}

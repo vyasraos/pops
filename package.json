@@ -20,10 +20,10 @@
     "dev:watch": "bun --watch src/cli.ts",
     "start": "bun run dist/cli.js",
     "test": "bun test",
-    "lint": "biome lint src",
-    "format": "biome format src --write",
-    "check": "biome check src",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint src --fix",
     "type-check": "bun run tsc --noEmit",
+    "check": "bun run lint && bun run type-check",
     "link": "bun link",
     "unlink": "bun unlink pops",
     "release": "bun run build:binaries-all"
@@ -60,11 +60,11 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.1",
     "@types/inquirer": "^8.2.10",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.8.0",
     "@types/yargs": "^17.0.32",
+    "oxlint": "^1.28.0",
     "typescript": "^5.2.2"
   },
   "engines": {

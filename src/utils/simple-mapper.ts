@@ -29,6 +29,9 @@ export class SimpleMapper {
     // Fields that cannot be updated via API (workflow fields, etc.)
     const readonlyFields = ['status', 'assignee', 'reporter', 'created', 'updated', 'resolution'];
 
+    // Get issue type to determine if components should be skipped
+    const issueType = properties.type as string;
+
     for (const [propertyName, apiPath] of Object.entries(mapping)) {
       const value = properties[propertyName];
       if (value !== undefined && value !== null) {
@@ -37,6 +40,13 @@ export class SimpleMapper {
           console.log(`⚠️  Skipping readonly field: ${propertyName}`);
           continue;
         }
+
+        // Skip components field for non-EPIC issue types
+        if (propertyName === 'components' && issueType !== 'Epic') {
+          console.log(`⚠️  Skipping components field for non-EPIC issue type: ${issueType}`);
+          continue;
+        }
+
         result[apiPath as string] = value;
       }
     }

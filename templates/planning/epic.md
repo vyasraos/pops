@@ -1,3 +1,24 @@
+---
+properties:
+  key: null
+  type: Epic
+  workstream: IaC
+  initiative: Private Cloud 2.0
+  labels: []
+  status: null
+  points: null
+  components: []
+mapping:
+  key: api.key
+  type: api.fields.issuetype.name
+  workstream: api.fields.customfield_12401.value
+  initiative: api.fields.customfield_12400.value
+  labels: api.fields.labels[]
+  status: api.fields.status.name
+  points: api.fields.customfield_10006
+  components: api.fields.components[].name
+---
+
 # Epic Template
 
 ## Title

@@ -54,13 +54,8 @@ export class FrontmatterParser {
     const lines = content.split('\n');
 
     if (lines.length < 2 || lines[0] !== FrontmatterParser.FRONTMATTER_DELIMITER) {
-      // File doesn't have frontmatter, create default
-      const defaultFrontmatter = FrontmatterParser.createFromTemplate('Epic');
-      return {
-        frontmatter: defaultFrontmatter,
-        content: content,
-        rawContent: content,
-      };
+      // File doesn't have frontmatter, but we can't create a default without project key
+      throw new Error('File does not contain valid frontmatter and project key is required. Please ensure the file has proper YAML frontmatter or provide a project key.');
     }
 
     let frontmatterEndIndex = -1;
@@ -262,13 +257,18 @@ export class FrontmatterParser {
   static createFromTemplate(
     type: 'Epic' | 'Story' | 'Task',
     componentName?: string,
-    parentIssueKey?: string
+    parentIssueKey?: string,
+    projectKey?: string
   ): FrontmatterData {
+    if (!projectKey) {
+      throw new Error('Project key is required when creating frontmatter template. Please provide a valid project key.');
+    }
+    
     const frontmatter: FrontmatterData = {
       standard: {
-        project: 'APE',
+        project: projectKey,
         type,
-        components: componentName ? [componentName] : [],
+        components: [],
         labels: [],
         status: null,
       },
@@ -285,6 +285,11 @@ export class FrontmatterParser {
         remoteHash: null,
       },
     };
+
+    // Only set components for EPICs
+    if (type === 'Epic' && componentName) {
+      frontmatter.standard.components = [componentName];
+    }
 
     return frontmatter;
   }
@@ -303,8 +308,9 @@ export class FrontmatterParser {
       errors.push('Missing required field: standard.project');
     }
 
-    if (!Array.isArray(frontmatter.standard.components)) {
-      errors.push('standard.components must be an array');
+    // Only validate components array for epics
+    if (frontmatter.standard.type === 'Epic' && !Array.isArray(frontmatter.standard.components)) {
+      errors.push('standard.components must be an array for epics');
     }
 
     if (!Array.isArray(frontmatter.standard.labels)) {

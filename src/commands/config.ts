@@ -189,7 +189,7 @@ class ConfigValidator {
           try {
             fs.mkdirSync(dirPath, { recursive: true });
             console.log(chalk.green(`  ✅ ${name} directory created: ${dirPath}`));
-          } catch (_error) {
+          } catch {
             this.addError(`Failed to create ${name.toLowerCase()} directory: ${dirPath}`);
           }
         } else {

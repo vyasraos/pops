@@ -182,11 +182,15 @@ export class JiraApiClient {
     try {
       const client = await this.getClient();
       const tomlConfig = this.popsConfig.getConfig();
-      const projectKey = tomlConfig.jira?.project || 'APE';
+      const projectKey = tomlConfig.jira?.project;
+      
+      if (!projectKey) {
+        throw new Error('Project key is required in pops.toml configuration. Please add "project = "YOUR_PROJECT_KEY"" under [jira] section.');
+      }
 
       // Try multiple approaches to find children
       // First try the standard Jira parent field
-      let jql = `project = ${projectKey} AND parent = ${parentKey} AND labels NOT IN ("workspace")`;
+      let jql = `project = ${projectKey} AND parent = ${parentKey}`;
 
       try {
         const response = await client.get('/search', {
@@ -204,14 +208,14 @@ export class JiraApiClient {
           );
           return response.data.issues;
         }
-      } catch (_error) {
+      } catch {
         logger.debug(
           `Parent field approach failed for ${parentKey}, trying alternative approaches`
         );
       }
 
       // If parent field doesn't work, try using Epic Link field
-      jql = `project = ${projectKey} AND "Epic Link" = ${parentKey} AND labels NOT IN ("workspace")`;
+      jql = `project = ${projectKey} AND "Epic Link" = ${parentKey}`;
 
       try {
         const response = await client.get('/search', {
@@ -229,7 +233,7 @@ export class JiraApiClient {
           );
           return response.data.issues;
         }
-      } catch (_error) {
+      } catch {
         logger.debug(
           `Epic Link field approach failed for ${parentKey}, trying custom field approach`
         );
@@ -254,7 +258,7 @@ export class JiraApiClient {
           );
           return response.data.issues;
         }
-      } catch (_error) {
+      } catch {
         logger.debug(`Custom field approach failed for ${parentKey}`);
       }
 
@@ -273,9 +277,13 @@ export class JiraApiClient {
     try {
       const client = await this.getClient();
       const tomlConfig = this.popsConfig.getConfig();
-      const projectKey = tomlConfig.jira?.project || 'APE';
+      const projectKey = tomlConfig.jira?.project;
+      
+      if (!projectKey) {
+        throw new Error('Project key is required in pops.toml configuration. Please add "project = "YOUR_PROJECT_KEY"" under [jira] section.');
+      }
 
-      const jql = `project = ${projectKey} AND component = "${componentName}" AND issuetype = Epic AND labels NOT IN ("workspace")`;
+      const jql = `project = ${projectKey} AND component = "${componentName}" AND issuetype = Epic`;
       const response = await client.get('/search', {
         params: {
           jql,
@@ -301,7 +309,11 @@ export class JiraApiClient {
     try {
       const client = await this.getClient();
       const tomlConfig = this.popsConfig.getConfig();
-      const projectKey = tomlConfig.jira?.project || 'APE';
+      const projectKey = tomlConfig.jira?.project;
+      
+      if (!projectKey) {
+        throw new Error('Project key is required in pops.toml configuration. Please add "project = "YOUR_PROJECT_KEY"" under [jira] section.');
+      }
 
       const jql = `project = ${projectKey} AND component = "${componentName}" AND issuetype = Epic`;
       const response = await client.get('/search', {

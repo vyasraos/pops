@@ -187,7 +187,7 @@ class IssueValidator {
           files.push(fullPath);
         }
       }
-    } catch (_error) {
+    } catch {
       // Directory might not exist or be accessible, continue
     }
   }
@@ -506,7 +506,11 @@ class IssueValidator {
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
           // Check if it's an issue file with the matching key
           const config = this.popsConfig.getConfig();
-          const projectKey = config.jira?.project || 'GVT';
+          const projectKey = config.jira?.project;
+          
+          if (!projectKey) {
+            throw new Error('Project key is required in pops.toml configuration. Please add "project = "YOUR_PROJECT_KEY"" under [jira] section.');
+          }
           const projectRegex = new RegExp(`^(epic|story|task|bug|sub-task)-${projectKey}-\\d+\\.md$`, 'i');
           if (entry.name.match(projectRegex)) {
             try {

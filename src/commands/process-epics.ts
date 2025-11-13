@@ -56,7 +56,7 @@ export const processEpicsCommand = {
       const dataPath = dataService.getDataPath();
       try {
         await require('node:fs/promises').access(dataPath);
-      } catch (_error) {
+      } catch {
         console.log(
           chalk.red('❌ _data folder not found. Please run'),
           chalk.cyan('pops fetch-epics'),

@@ -301,15 +301,27 @@ class IssueCreator {
   }
 
   private async createJiraIssue(issueData: IssueData): Promise<any> {
+    // Get project key from configuration
+    const config = this.popsConfig.getConfig();
+    const projectKey = config.jira?.project;
+    
+    if (!projectKey) {
+      throw new Error('Project key is required in pops.toml configuration. Please add "project = "YOUR_PROJECT_KEY"" under [jira] section.');
+    }
+    
     // Build the basic issue payload
     let jiraFields: any = {
-      project: { key: 'APE' },
+      project: { key: projectKey },
       summary: issueData.summary,
       description: issueData.description,
       issuetype: { name: issueData.type },
-      components: [{ name: issueData.component }],
       labels: issueData.labels,
     };
+
+    // Only set components field for EPICs
+    if (issueData.type === 'Epic') {
+      jiraFields.components = [{ name: issueData.component }];
+    }
 
     // Try to get mapping from template and apply it
     try {
@@ -318,16 +330,20 @@ class IssueCreator {
         console.log(chalk.blue('📋 Applying template field mappings...'));
 
         // Create properties object from issueData
-        const properties = {
+        const properties: any = {
           key: '', // Will be set by Jira
           type: issueData.type,
           workstream: 'IaC', // Default workstream
           initiative: 'Private Cloud 2.0', // Default initiative
-          components: [issueData.component],
           labels: issueData.labels,
           status: 'To Do',
           points: null,
         };
+
+        // Only include components for EPICs
+        if (issueData.type === 'Epic') {
+          properties.components = [issueData.component];
+        }
 
         const mappedFields = this.mapper.mapPropertiesToJira(properties, templateMapping);
         const additionalFields = this.mapper.convertToJiraFields(mappedFields);
@@ -339,7 +355,7 @@ class IssueCreator {
           chalk.green(`✅ Applied ${Object.keys(mappedFields).length} template mappings`)
         );
       }
-    } catch (_error) {
+    } catch {
       console.log(chalk.yellow('⚠️  Could not apply template mappings, using defaults'));
     }
 
@@ -371,7 +387,7 @@ class IssueCreator {
         const frontmatter = yaml.load(frontmatterMatch[1]) as any;
         return frontmatter.mapping;
       }
-    } catch (_error) {
+    } catch {
       // Template not found or no mapping, return null
     }
     return null;
@@ -447,18 +463,22 @@ class IssueCreator {
 
   private async generateMarkdownContent(createdIssue: any, issueData: IssueData): Promise<string> {
     // Create a mock issue data structure for the markdown processor
-    const mockIssueData = {
+    const mockIssueData: any = {
       id: createdIssue.id,
       key: createdIssue.key,
       fields: {
         summary: issueData.summary,
         description: issueData.description,
         issuetype: { name: issueData.type },
-        components: [{ name: issueData.component }],
         labels: issueData.labels,
         status: { name: 'To Do' },
       },
     };
+
+    // Only include components for EPICs
+    if (issueData.type === 'Epic') {
+      mockIssueData.fields.components = [{ name: issueData.component }];
+    }
 
     // Use the markdown processor to generate content
     return await this.markdownProcessor.generateMarkdownPublic(

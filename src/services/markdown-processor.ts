@@ -85,7 +85,7 @@ export class MarkdownProcessor {
           }
         }
       }
-    } catch (_error) {
+    } catch {
       // Component directory doesn't exist or can't be read
     }
 
@@ -220,19 +220,19 @@ export class MarkdownProcessor {
       const correctEpicDir = this.determineCorrectEpicDirectory(epic);
 
       // STRICT ENFORCEMENT: Validate and filter issues to belong to this epic/component
-      const validatedStories = this.validateIssuesForDirectory(
+      const validatedStories = await this.validateIssuesForDirectory(
         stories,
         epic.key,
         correctComponent,
         'Story'
       );
-      const validatedTasks = this.validateIssuesForDirectory(
+      const validatedTasks = await this.validateIssuesForDirectory(
         tasks,
         epic.key,
         correctComponent,
         'Task'
       );
-      const validatedSpikes = this.validateIssuesForDirectory(
+      const validatedSpikes = await this.validateIssuesForDirectory(
         spikes,
         epic.key,
         correctComponent,
@@ -552,12 +552,12 @@ export class MarkdownProcessor {
     return `epic-${epicName}`;
   }
 
-  private validateIssuesForDirectory(
+  private async validateIssuesForDirectory(
     issues: IssueRawData[],
     epicKey: string,
     expectedComponent: string,
-    issueType: string
-  ): IssueRawData[] {
+    _issueType: string
+  ): Promise<IssueRawData[]> {
     const validIssues: IssueRawData[] = [];
 
     for (const issue of issues) {
@@ -571,20 +571,41 @@ export class MarkdownProcessor {
         reasons.push(`Epic Link mismatch: expected ${epicKey}, got ${epicLink || 'none'}`);
       }
 
-      // Check 2: Component validation - does this issue belong to the expected component?
-      const issueComponents = (issue.fields.components as any) || [];
-      const issueComponentNames = issueComponents.map((comp: any) => comp.name);
+      // Check 2: Component validation - only validate components for epics
+      const issueType = (issue.fields.issuetype as any)?.name;
+      if (issueType === 'Epic') {
+        const issueComponents = (issue.fields.components as any) || [];
+        const issueComponentNames = issueComponents.map((comp: any) => comp.name);
 
-      if (!issueComponentNames.includes(expectedComponent)) {
-        isValid = false;
-        reasons.push(
-          `Component mismatch: expected ${expectedComponent}, got [${issueComponentNames.join(', ')}]`
-        );
+        if (!issueComponentNames.includes(expectedComponent)) {
+          isValid = false;
+          reasons.push(
+            `Component mismatch: expected ${expectedComponent}, got [${issueComponentNames.join(', ')}]`
+          );
+        }
       }
 
       if (isValid) {
         validIssues.push(issue);
       } else {
+        // Try to fix component mismatch automatically
+        const hasComponentMismatch = reasons.some(reason => reason.includes('Component mismatch'));
+        if (hasComponentMismatch) {
+          try {
+            logger.info(`🔧 Attempting to fix component mismatch for ${issueType} ${issue.key}...`);
+            const fixedIssue = await this.fixComponentMismatch(issue, expectedComponent);
+            if (fixedIssue) {
+              logger.info(`✅ Successfully fixed component for ${issue.key}, re-validating...`);
+              // Re-validate the fixed issue
+              const reValidatedIssues = await this.validateIssuesForDirectory([fixedIssue], epicKey, expectedComponent, issueType);
+              validIssues.push(...reValidatedIssues);
+              continue;
+            }
+          } catch (error) {
+            logger.warn(`Failed to fix component mismatch for ${issue.key}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+        
         logger.warn(
           `Excluding ${issueType} ${issue.key} from directory structure: ${reasons.join(', ')}`
         );
@@ -594,11 +615,62 @@ export class MarkdownProcessor {
     return validIssues;
   }
 
+  private async fixComponentMismatch(issue: IssueRawData, correctComponent: string): Promise<IssueRawData | null> {
+    try {
+      // Only fix component mismatches for epics
+      const issueType = (issue.fields.issuetype as any)?.name;
+      if (issueType !== 'Epic') {
+        logger.info(`Skipping component fix for ${issueType} ${issue.key} - components are only required for epics`);
+        return null;
+      }
+
+      // Import JiraApiClient dynamically to avoid circular dependencies
+      const { JiraApiClient } = await import('./jira-api-client');
+      const jiraClient = new JiraApiClient();
+
+      // Update the issue with only the correct component
+      const updatePayload = {
+        fields: {
+          components: [{ name: correctComponent }]
+        }
+      };
+
+      logger.info(`🔄 Updating ${issue.key} to have only component: ${correctComponent}`);
+      await jiraClient.updateIssue(issue.key, updatePayload);
+
+      // Re-fetch the issue to get updated data
+      logger.info(`📥 Re-fetching updated issue ${issue.key}...`);
+      const updatedIssue = await jiraClient.getIssue(issue.key);
+      
+      if (!updatedIssue) {
+        logger.error(`Failed to re-fetch issue ${issue.key} after component update`);
+        return null;
+      }
+
+      // Convert to IssueRawData format
+      const updatedIssueData: IssueRawData = {
+        key: updatedIssue.key,
+        fields: updatedIssue.fields,
+        expand: updatedIssue.expand,
+        id: updatedIssue.id,
+        self: updatedIssue.self,
+      };
+
+      logger.info(`✅ Successfully updated and re-fetched ${issue.key} with correct component`);
+      return updatedIssueData;
+
+    } catch (error) {
+      logger.error(`Failed to fix component mismatch for ${issue.key}:`, error);
+      return null;
+    }
+  }
+
   private getEpicLink(issue: IssueRawData): string | null {
     // Epic Link is typically in customfield_10014 for JIRA Cloud
     // or could be in customfield_10008 for JIRA Server/DC
     // Check multiple possible fields for epic link
     const epicLinkFields = [
+      'customfield_10000', // Primary Epic Link field used in JQL queries
       'customfield_10014', // Common for JIRA Cloud
       'customfield_10008', // Common for JIRA Server/DC
       'customfield_10006', // Alternative
@@ -835,7 +907,7 @@ export class MarkdownProcessor {
       }
 
       return false;
-    } catch (_error) {
+    } catch {
       return false;
     }
   }
@@ -864,7 +936,7 @@ export class MarkdownProcessor {
         await this.removeDirectoryRecursively(componentPath);
         logger.info(`Removed empty component directory: ${componentPath}`);
       }
-    } catch (_error) {
+    } catch {
       // Ignore errors, this is just cleanup
     }
   }
